@@ -27,8 +27,13 @@ async function setWidth(page, x, px) {
   await gs.goto(page, `'${sheet}'!A1`);
   await gs.goto(page, `'${sheet}'!A:${name(last)}`);
   await page.waitForTimeout(600);
-  await page.keyboard.press('Control+Shift+0');            // ausgeblendete Spalten einblenden
-  await page.waitForTimeout(1200);
+  await page.mouse.click(ROWHEAD + 20, HEADY, { button: 'right' });   // ausgeblendete Spalten einblenden
+  await page.waitForTimeout(800);
+  const unhide = page.locator('.goog-menuitem:visible', { hasText: /^Spalten einblenden$/ });
+  if (await unhide.count()) { await unhide.first().click(); await page.waitForTimeout(1500); }
+  else await page.keyboard.press('Escape');
+  await gs.goto(page, `'${sheet}'!A:${name(last)}`);
+  await page.waitForTimeout(600);
   await setWidth(page, ROWHEAD + base / 2, base);          // alle Spalten auf Basisbreite
   const widths = {}; for (let i = 1; i <= last; i++) widths[i] = base;
   for (let i = 1; i <= last; i++) {

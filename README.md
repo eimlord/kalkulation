@@ -89,9 +89,20 @@ GSHEET_ID=<ID der Tabelle> node google/fill.js google/sheets.json create paste:P
 GSHEET_ID=<ID der Tabelle> node google/fill.js google/sheets.json ops:Projekt ops:Positionen ops:Zusammenfassung ops:Finanzierung "ops:Übertrag Antrag" ops:Sätze ops:KV
 ```
 
-Weitere Schritte von `fill.js`: `clear:<Blatt>`, `plain:'<Blatt>'!<Bereich>` (Zahlenformat
-„Automatisch“, falls Formeln als Text gespeichert wurden), `cells:<Blatt>:<Zellen>`,
-`delete:<Blatt>`, `add:<Blatt>`. Spaltenbreiten setzt `google/widths.js`.
+Weitere Schritte von `fill.js`:
+
+| Schritt | Wirkung |
+| --- | --- |
+| `reset:<Blatt>` | Inhalte, Formatierung, Datenvalidierung und bedingte Formatierung entfernen (Zahlenformat „Nur Text“ bleibt, dafür `plain`) |
+| `plain:'<Blatt>'!<Bereich>` | Zahlenformat „Automatisch“, z. B. wenn Formeln als Text gespeichert wurden |
+| `colblock:<Blatt>:<Spalte>:<von>:<bis>` | Zellen einer Spalte samt Format aus der Vorgabe neu einfügen |
+| `check:<Blatt>!<Zelle>,…` | Kästchen einfügen und auf WAHR schalten |
+| `cfrot:'<Blatt>'!<Zelle>` / `cfdel:'<Blatt>'!<Zelle>\|<Text>` | Regeln der bedingten Formatierung rot färben bzw. löschen |
+| `cells:<Blatt>:<Zellen>`, `del:'<Blatt>'!<Bereich>`, `delete:<Blatt>`, `add:<Blatt>` | einzelne Zellen neu einfügen, Bereich leeren, Blatt löschen oder anlegen |
+
+`paste` blendet vorher ausgeblendete Spalten ein, sonst rutscht der Inhalt nach rechts.
+Kästchen werden nie per Einfügen von „WAHR“ gesetzt (das ergäbe Text), sondern mit der Leertaste.
+Spaltenbreiten setzt `google/widths.js` (blendet Spalten vorher ein, `HIDE=` blendet danach wieder aus).
 
 Voraussetzungen: Die Tabelle ist für „Jeder, der den Link hat“ als Mitbearbeiter freigegeben,
 das Gebietsschema ist deutsch (Formeln mit `;`, Dezimalkomma), und die Umgebung darf

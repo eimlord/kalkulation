@@ -56,7 +56,64 @@ async function create(page) {
   }
 }
 
+// Ausgeblendete Spalten einblenden: Beim Einfügen ab A1 rutscht sonst alles um die ausgeblendeten Spalten nach rechts
+async function unhideCols(page, sheet, ncols) {
+  await gs.goto(page, `'${sheet}'!A1`);
+  await gs.goto(page, `'${sheet}'!A:${colName(ncols)}`);
+  await page.waitForTimeout(600);
+  await page.mouse.click(90, 153, { button: 'right' });
+  await page.waitForTimeout(800);
+  const it = page.locator('.goog-menuitem:visible', { hasText: /^Spalten einblenden$/ });
+  if (await it.count()) { await it.first().click(); await page.waitForTimeout(1500); log(sheet, 'Spalten eingeblendet'); }
+  else await page.keyboard.press('Escape');
+}
+
+// Blatt vollständig zurücksetzen: Inhalte, Formate, Datenvalidierung, bedingte Formatierung, Fixierung
+async function resetSheet(page, s) {
+  const ncols = Math.max(...s.rows.map(r => r.length)) + 4;
+  const ref = `'${s.name}'!A1:${colName(ncols)}${s.rows.length + 20}`;
+  await unhideCols(page, s.name, ncols - 4);   // ganze Spalten nur bis zur letzten vorhandenen Spalte
+  await gs.goto(page, ref);
+  await page.keyboard.press('Delete'); await page.waitForTimeout(1500);
+  log('Inhalte gelöscht'); await menu(page, '#docs-format-menu', 'Formatierung entfernen'); log('Formatierung entfernt');
+  // „Formatierung entfernen“ nimmt auch die Datenvalidierung mit; Reste über die Seitenleiste entfernen
+  try {
+    await gs.goto(page, ref);
+    await page.locator('#docs-menubar [role="menuitem"]', { hasText: /^Daten$/ }).first().click();
+    await page.waitForTimeout(700);
+    await page.locator('.goog-menu:visible .goog-menuitem:visible', { hasText: 'Datenvalidierung' }).first().click();
+    await page.waitForTimeout(2000);
+    const rm = page.locator('.waffle-sidebar-container [role="button"]:visible', { hasText: /^Alle entfernen$/ });
+    if (await rm.count()) { await rm.first().click(); await page.waitForTimeout(1500); log('Validierung entfernt'); }
+    await page.locator('[role="button"][aria-label="Schließen"]:visible').first().click().catch(() => {});
+    await page.waitForTimeout(800);
+  } catch (e) { log('Validierung: übersprungen', e.message.split('\n')[0]); await page.keyboard.press('Escape'); }
+  await gs.goto(page, ref);
+  await menu(page, '#docs-format-menu', 'Bedingte Formatierung');
+  await page.waitForTimeout(2000);
+  const rules = page.locator('.waffle-conditionalformat-rule-list [role="option"]:visible');
+  try {
+    for (let i = 0; i < 20 && await rules.count(); i++) {
+      await rules.first().hover({ timeout: 3000 }); await page.waitForTimeout(400);
+      await rules.first().locator('.waffle-conditionalformat-delete-button-holder *').first().click({ force: true, timeout: 3000 });
+      await page.waitForTimeout(1200);
+    }
+  } catch (e) { log('bedingte Formatierung: keine Regeln gelöscht'); }
+  // ohne Regeln öffnet die Seitenleiste direkt eine neue Regel: abbrechen, damit keine leere Regel entsteht
+  await page.locator('[role="button"]:visible', { hasText: /^Abbrechen$/ }).first().click({ timeout: 3000 }).catch(() => {});
+  await page.waitForTimeout(800);
+  await page.locator('[role="button"][aria-label="Schließen"]:visible').first().click({ timeout: 3000 }).catch(() => {});
+  await page.waitForTimeout(800);
+  await gs.goto(page, `'${s.name}'!A1`);
+  for (const what of ['Keine Zeilen', 'Keine Spalten']) {
+    try { await menu(page, '#docs-view-menu', 'Fixieren', what); }
+    catch (e) { log('Fixierung:', what, 'übersprungen'); await page.keyboard.press('Escape'); }
+  }
+  log('zurückgesetzt:', s.name);
+}
+
 async function pasteSheet(page, s) {
+  await unhideCols(page, s.name, Math.max(...s.rows.map(r => r.length)));
   const styles = {};
   for (const [r, c, st] of s.styles) styles[`${r},${c}`] = st;
   const rows = s.rows;
@@ -107,6 +164,32 @@ async function dropdown(page, op) {
   await page.waitForTimeout(1500);
 }
 
+// Füllfarbe in der Seitenleiste „Bedingte Formatierung“ (nicht der Füllfarbe-Knopf der Symbolleiste)
+async function cfFill(page, color) {
+  await page.click('.waffle-conditionalformat-custom-toolbar [aria-label="Füllfarbe"]'); await page.waitForTimeout(700);
+  await page.locator(`.docs-material-colorpalette-cell[aria-label="${!color || color === 'rot' ? 'Hellrot 3' : color}"]:visible`).first().click();
+  await page.waitForTimeout(700);
+}
+
+// Vorhandene Regeln mit Standardfarbe (grün) im Bereich auf Rot umstellen
+async function cfRecolor(page, ref) {
+  await gs.goto(page, ref);
+  await menu(page, '#docs-format-menu', 'Bedingte Formatierung');
+  await page.waitForTimeout(2000);
+  const green = page.locator('.waffle-conditionalformat-format-preview[aria-label*="#b7e1cd"]:visible');
+  let n = 0;
+  while (await green.count()) {
+    await green.first().click(); await page.waitForTimeout(1500);
+    await cfFill(page, 'rot');
+    await page.locator('[role="button"]:visible', { hasText: /^Fertig$/ }).first().click();
+    await page.waitForTimeout(1500);
+    if (++n > 10) break;
+  }
+  await page.locator('[role="button"][aria-label="Schließen"]:visible').first().click().catch(() => {});
+  await page.waitForTimeout(800);
+  log('Regeln umgefärbt:', ref, n);
+}
+
 async function runOps(page, s) {
   const only = process.env.OPS_ONLY ? process.env.OPS_ONLY.split(',') : null;
   for (const op of s.ops) {
@@ -122,6 +205,17 @@ async function runOps(page, s) {
       } else if (op.op === 'checkbox') {
         await gs.goto(page, `'${s.name}'!${op.range}`);
         await menu(page, '#docs-insert-menu', 'Kästchen');
+        // Kästchen setzen vorhandene Werte auf FALSCH: gesetzte Häkchen aus der Vorgabe wiederherstellen
+        const m = op.range.match(/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/) || op.range.match(/^([A-Z]+)(\d+)$/);
+        if (m) {
+          const ci = c => { let n = 0; for (const ch of c) n = n * 26 + ch.charCodeAt(0) - 64; return n; };
+          const [c1, r1, c2, r2] = m[3] ? [ci(m[1]), +m[2], ci(m[3]), +m[4]] : [ci(m[1]), +m[2], ci(m[1]), +m[2]];
+          for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) {
+            const v = (s.rows[r - 1] || [])[c - 1];
+            // Einfügen von „WAHR“ ergäbe Text; die Leertaste schaltet das (jetzt leere) Kästchen auf WAHR
+            if (v === 'WAHR' || v === 'TRUE') { await gs.goto(page, `'${s.name}'!${colName(c)}${r}`); await page.keyboard.press('Space'); await page.waitForTimeout(800); }
+          }
+        }
       } else if (op.op === 'dropdown' || op.op === 'dropdown_range') {
         await dropdown(page, { ...op, range: `'${s.name}'!${op.range}` });
       } else if (op.op === 'freeze') {
@@ -149,9 +243,7 @@ async function runOps(page, s) {
         await page.waitForTimeout(800);
         const f = page.locator('input[aria-label="Wert oder Formel"]:visible').first();
         await f.click(); await f.fill(op.formula); await page.waitForTimeout(500);
-        await page.click('[role="button"][aria-label="Füllfarbe"]'); await page.waitForTimeout(700);
-        await page.locator(`.docs-material-colorpalette-cell[aria-label="${op.color === 'rot' ? 'Hellrot 3' : op.color}"]:visible`).first().click();
-        await page.waitForTimeout(700);
+        await cfFill(page, op.color);
         await page.locator('[role="button"]:visible', { hasText: /^Fertig$/ }).first().click();
         await page.waitForTimeout(1200);
         await page.locator('[role="button"][aria-label="Schließen"]:visible').first().click().catch(() => {});
@@ -224,6 +316,34 @@ async function deleteSheet(page, name) {
           log('Spalte neu:', name, `${colL}${a}:${colL}${b}`);
         }
       }
+      else if (kind === 'reset') await resetSheet(page, spec.find(x => x.name === arg));
+      else if (kind === 'del') { const ref = step.slice(4); await gs.goto(page, ref); await page.keyboard.press('Delete'); await page.waitForTimeout(1200); log('gelöscht:', ref); }
+      else if (kind === 'check') {
+        // check:<Blatt>!<Zelle>,… – Kästchen einfügen und auf WAHR schalten
+        const [name, cells] = step.slice(6).split('!');
+        for (const c of cells.split(',')) {
+          await gs.goto(page, `'${name}'!${c}`); await menu(page, '#docs-insert-menu', 'Kästchen');
+          await gs.goto(page, `'${name}'!${c}`); await page.keyboard.press('Space'); await page.waitForTimeout(800);
+          log('Kästchen WAHR:', name, c);
+        }
+      }
+      else if (kind === 'cfdel') {
+        // cfdel:<Ref>|<Text> – Regeln der bedingten Formatierung löschen, deren Beschreibung den Text enthält
+        const [ref, text] = step.slice(6).split('|');
+        await gs.goto(page, ref);
+        await menu(page, '#docs-format-menu', 'Bedingte Formatierung');
+        await page.waitForTimeout(2000);
+        const opt = page.locator('.waffle-conditionalformat-rule-list [role="option"]:visible', { hasText: text });
+        let n = 0;
+        while (await opt.count() && n < 10) {
+          await opt.first().hover(); await page.waitForTimeout(500);
+          const del = opt.first().locator('.waffle-conditionalformat-delete-button-holder [role="button"], .waffle-conditionalformat-delete-button-holder div').first();
+          await del.click({ force: true }); await page.waitForTimeout(1500); n++;
+        }
+        await page.locator('[role="button"][aria-label="Schließen"]:visible').first().click().catch(() => {});
+        log('Regeln gelöscht:', ref, text, n);
+      }
+      else if (kind === 'cfrot') { await cfRecolor(page, step.slice(6)); }
       else if (kind === 'plain') {
         // plain:<Blatt>!<Bereich> – Zahlenformat „Automatisch“ (z. B. wenn Formeln als Text gespeichert wurden)
         const ref = step.slice(6); await gs.goto(page, ref); await menu(page, '#docs-format-menu', 'Zahl', 'Automatisch'); log('Automatisch:', ref);
@@ -251,6 +371,12 @@ async function deleteSheet(page, name) {
     }
     await page.waitForTimeout(5000);
     if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT });
+  } catch (e) {
+    // Bei Fehlern Bildschirm und offene Dialoge festhalten
+    const dlg = await page.$$eval('.modal-dialog', els => els.filter(x => x.offsetParent).map(x => x.innerText)).catch(() => []);
+    log('ABBRUCH:', e.message.split('\n')[0], dlg.length ? 'Dialog: ' + dlg.join(' | ') : '');
+    if (process.env.ERRSHOT) await page.screenshot({ path: process.env.ERRSHOT });
+    process.exitCode = 1;
   } finally {
     await browser.close();
   }

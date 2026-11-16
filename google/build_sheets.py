@@ -391,12 +391,15 @@ def build(template, positions_path, inputs=None):
                               "noch zu erwarten", "Endkosten", "± zu Plan", "KV-Mindestgage 40 h",
                               "Hilfe: U-Bahn-Abgabe", "Hilfe: Menge × Preis", "Hilfe: 60 h")]
     po.ops += [{"op": "text", "range": rng("Nr.")}]
+    # Partner-Auswahl nur in Positionszeilen, nicht in den Gruppenzeilen
+    bounds = group_rows + [last + 1]
+    po.ops += [{"op": "dropdown", "range": f"{L['Partner']}{a + 1}:{L['Partner']}{b - 1}", "options": ["AT", "A", "B", "C"]}
+               for a, b in zip(bounds, bounds[1:]) if b - 1 >= a + 1]
     po.ops += [{"op": "currency", "range": m} for m in money]
     po.ops += [{"op": "percent", "range": rng("Abw. zu KV")}, {"op": "percent", "range": rng("Anteil förderbar")}]
     po.ops += [
         {"op": "checkbox", "range": f"{L['ILV']}{g3a}:{L['ILV']}{g3b}"},
         {"op": "checkbox", "range": f"{L['ohne U-Bahn-Abgabe']}{g3a}:{L['ohne U-Bahn-Abgabe']}{g3b}"},
-        {"op": "dropdown", "range": f"{L['Partner']}{first_data + 1}:{L['Partner']}{last}", "options": ["AT", "A", "B", "C"]},
         {"op": "dropdown", "range": f"{L['M/W']}{g3a}:{L['M/W']}{g3b}", "options": ["M", "W"]},
         {"op": "dropdown_range", "range": f"{L['KV-Funktion']}{g3a}:{L['KV-Funktion']}{g3b}", "source": f"='KV'!$A$2:$A${kv_last}"},
         {"op": "cf_formula", "range": f"B{first_data}:{L['ohne U-Bahn-Abgabe']}{last}", "formula": f"=${L['Prüfung']}{first_data}<>\"\"", "color": "rot"},
@@ -594,7 +597,7 @@ def build(template, positions_path, inputs=None):
         (7, "Anreizförderung (automatisch)", "='Zusammenfassung'!$B$30", "currency"),
         (8, "Anteil Mediendienstanbieter an der HK", f"=IF(B3=0;0;SUMIFS({D_};{A_};\"Mediendienstanbieter\";{E_};\"<>abgelehnt\")/B3)", "percent"),
         (9, "Anteil Eigenanteil an der HK (AT)", f"=IF({HK_AT}=0;0;SUMIFS({D_};{A_};\"Eigenanteil\";{E_};\"<>abgelehnt\")/{HK_AT})", "percent"),
-        (10, "Prüfung", f"=TEXTJOIN(\", \";TRUE();IF(ROUND(B6;0)>0;\"Lücke \"&TEXT(B6;\"#.##0 €\");\"\");IF(ROUND(B6;0)<0;\"Überfinanzierung \"&TEXT(-B6;\"#.##0 €\");\"\");"
+        (10, "Prüfung", f"=TEXTJOIN(\", \";TRUE();IF(ROUND(B6;0)>0;\"Lücke \"&TEXT(B6;\"#,##0 €\");\"\");IF(ROUND(B6;0)<0;\"Überfinanzierung \"&TEXT(-B6;\"#,##0 €\");\"\");"
                         f"IF(AND({ISFISA};B8<{K['MDA_MIN']});\"Mediendienstanbieter unter 30 %\";\"\");IF(B9<{K['EIGEN']};\"Eigenanteil unter 2,5 %\";\"\"))", None),
     ]
     for r, label, formula, fmt in summary:
