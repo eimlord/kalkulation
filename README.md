@@ -54,40 +54,49 @@ Alle Abweichungen stehen auch im Blatt „Hinweise“ des Sheets (Art = Umbau).
 # Interne Kalkulation als Google-Tabelle
 
 Neu aufgebautes internes Werkzeug (kein Excel): eine Positionstabelle statt 276 Spalten,
-Sätze mit Gültig-ab-Datum, Prüfungen im Klartext und ein Blatt für den Übertrag ins
-ÖFI-Formular. Befüllt wird eine per Link bearbeitbare Google-Tabelle direkt im Browser.
+Sätze mit Gültig-ab-Datum und Förderstelle, Prüfungen im Klartext mit roter Zeilenmarkierung,
+ein Finanzierungsplan und ein Blatt für den Übertrag ins Antragsformular. Befüllt wird eine
+per Link bearbeitbare Google-Tabelle direkt im Browser.
+
+Die Förderstelle (Regelwerk) wird zentral im Blatt „Projekt“ gewählt: **FISA+** (Standard)
+oder **ÖFI**. Sie bestimmt Produzent\*innenhonorar, FGK, Prüfungen und Anreizförderung.
 
 | Blatt | Inhalt |
 | --- | --- |
-| Projekt | Titel, Filmart, Werkstatt/BMWKMS/Debut, Bundesland, Stichtag, Überschreitungsreserve, Bond, Finanzierung; darunter die zum Stichtag gültigen Sätze |
-| Sätze | Schlüssel, Bezeichnung, Bundesland, Wert, gültig ab, Quelle (SV, DB, DZ je Bundesland, KommSt, MV, U-Bahn-Abgabe nur Wien, Diäten, Grenzen) |
+| Projekt | Titel, Förderstelle, Format (Film/Serie), Folgen, Filmart, Werkstatt/BMWKMS/Debut, Green Bonus, Gender Gap Financing, Bundesland, Stichtag, Überschreitungsreserve, Bond, Finanzierung; darunter die zum Stichtag und zur Förderstelle gültigen Sätze |
+| Positionen | alle 177 ÖFI-Positionen; je Zeile Partner (AT/A/B/C), Menge, Preis, 60-h-Wochen, ILV, M/W, Plan, LNK, Anteil förderbar, Prüfung, Kostenstand. Gr., Art und KV-Funktion ergeben sich aus der Nr.; Zeilen mit Prüfhinweis sind rot |
+| Zusammenfassung | Anzahl Prüfhinweise; Kostengruppen je Partner; FK, Honorar, FGK, Bond, Finanzierung, Überschreitungsreserve, HK (gesamt und förderbar); Anreizförderung; Prüfungen der Förderstelle; ÖFI-Honorar ohne Zirkelbezug, Richtsätze; LNK-Aufteilung; Gender-Budgeting |
+| Finanzierung | Quellen mit Partner, Betrag, Status (geplant/beantragt/zugesagt/abgelehnt) und Anteil an der HK; Anreizförderung automatisch; Prüfung von Lücke, Eigenanteil und Mediendienstanbieter-Anteil |
+| Übertrag Antrag | Summen je Antragsposition in Formular-Reihenfolge (Wochen und Ø Gage für 40 h/60 h, Ist, noch zu erwarten je Partner); bei FISA+ Honorar und FGK als Pkt. 14/15 |
+| Sätze | Schlüssel, Bezeichnung, Förderstelle, Bundesland, Wert, gültig ab, Quelle (SV, DB, DZ je Bundesland, KommSt, MV, U-Bahn-Abgabe nur Wien, Diäten, FISA+- und ÖFI-Grenzen) |
 | KV | KV-Mindestgagen je Funktion mit gültig ab; 40 h/60 h/Tag inkl. SZ/UEL |
-| Positionen | alle 177 ÖFI-Positionen; je Zeile Partner (AT/A/B/C), Menge, Preis, 60-h-Wochen, ILV, M/W, Plan, LNK (ÖFI-Logik für Stab und Cast), Prüfung, Kostenstand |
-| Zusammenfassung | Kostengruppen je Partner, NFK, FGK, Bond, Finanzierung, Überschreitungsreserve, HK; Produzent*innenhonorar ohne Zirkelbezug; Richtsätze; LNK-Aufteilung; Gender-Budgeting |
-| ÖFI-Übertrag | Summen je ÖFI-Position in Formular-Reihenfolge (Wochen und Ø Gage für 40 h/60 h, Ist, noch zu erwarten je Partner) |
 
-Erzeugen und befüllen:
+Erzeugen und befüllen (`google/eingaben.json` enthält Eingaben, die beim Neuaufbau erhalten bleiben):
 
 ```bash
 python3 -I google/extract_positions.py vorlage/20270826_namen_ersetzt.xlsx > google/positions.json
 ```
 
 ```bash
-python3 -I google/build_sheets.py vorlage/20270826_EMPTY_TEMPLATE.xlsx google/positions.json > google/sheets.json
+python3 -I google/build_sheets.py vorlage/20270826_EMPTY_TEMPLATE.xlsx google/positions.json google/eingaben.json > google/sheets.json
 ```
 
 ```bash
-GSHEET_ID=<ID der Tabelle> node google/fill.js google/sheets.json create paste:Projekt paste:Sätze paste:KV paste:Positionen paste:Zusammenfassung paste:ÖFI-Übertrag
+GSHEET_ID=<ID der Tabelle> node google/fill.js google/sheets.json create paste:Projekt paste:Sätze paste:KV paste:Positionen paste:Zusammenfassung paste:Finanzierung "paste:Übertrag Antrag"
 ```
 
 ```bash
-GSHEET_ID=<ID der Tabelle> node google/fill.js google/sheets.json ops:Projekt ops:Sätze ops:KV ops:Positionen ops:Zusammenfassung ops:ÖFI-Übertrag
+GSHEET_ID=<ID der Tabelle> node google/fill.js google/sheets.json ops:Projekt ops:Positionen ops:Zusammenfassung ops:Finanzierung "ops:Übertrag Antrag" ops:Sätze ops:KV
 ```
+
+Weitere Schritte von `fill.js`: `clear:<Blatt>`, `plain:'<Blatt>'!<Bereich>` (Zahlenformat
+„Automatisch“, falls Formeln als Text gespeichert wurden), `cells:<Blatt>:<Zellen>`,
+`delete:<Blatt>`, `add:<Blatt>`. Spaltenbreiten setzt `google/widths.js`.
 
 Voraussetzungen: Die Tabelle ist für „Jeder, der den Link hat“ als Mitbearbeiter freigegeben,
 das Gebietsschema ist deutsch (Formeln mit `;`, Dezimalkomma), und die Umgebung darf
 `docs.google.com`, `0.docs.google.com` … `9.docs.google.com` sowie die Google-Static-Hosts erreichen.
-Spaltenbreiten setzt `google/widths.js`.
 
-Geprüft: Lohnnebenkosten (Stab und Cast), Produzent*innenhonorar, FGK, Überschreitungsreserve,
-Richtsätze und Überzahlungen stimmen mit einer unabhängigen Nachrechnung der ÖFI-Formeln überein.
+Geprüft: Lohnnebenkosten (Stab und Cast), Produzent\*innenhonorar (ÖFI und FISA+), FGK,
+Überschreitungsreserve, Richtsätze, Überzahlungen und Anreizförderung stimmen mit einer
+unabhängigen Nachrechnung überein.

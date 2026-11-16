@@ -45,9 +45,7 @@ async function create(page) {
     if (names.includes(s.name)) { log('vorhanden:', s.name); continue; }
     await page.click('[aria-label="Tabellenblatt hinzufügen"]');
     await page.waitForTimeout(2000);
-    const tabs = page.locator('.docs-sheet-tab .docs-sheet-tab-name');
-    const n = await tabs.count();
-    const tab = tabs.nth(n - 1);
+    const tab = page.locator('.docs-sheet-active-tab .docs-sheet-tab-name').first();
     await tab.dblclick();
     await page.waitForTimeout(600);
     await page.keyboard.press('Control+A');
@@ -131,6 +129,33 @@ async function runOps(page, s) {
         await gs.goto(page, cell);
         if (op.rows) await menu(page, '#docs-view-menu', 'Fixieren', op.rows === 1 ? '1 Zeile' : `Bis zu Zeile ${op.rows}`);
         if (op.cols) await menu(page, '#docs-view-menu', 'Fixieren', op.cols === 1 ? '1 Spalte' : `Bis zu Spalte ${colName(op.cols)}`);
+      } else if (op.op === 'hide') {
+        await gs.goto(page, `'${s.name}'!${op.range}`);
+        await page.keyboard.press('Control+Alt+0');
+        await page.waitForTimeout(1200);
+      } else if (op.op === 'cf_formula') {
+        await gs.goto(page, `'${s.name}'!${op.range}`);
+        await menu(page, '#docs-format-menu', 'Bedingte Formatierung');
+        await page.waitForTimeout(2000);
+        if (!(await page.locator('[role="listbox"][aria-label="Condition"]:visible').count())) {
+          await page.locator('[role="button"]:visible', { hasText: 'Weitere Regel hinzufügen' }).first().click();
+          await page.waitForTimeout(1500);
+        }
+        const rangeInput = page.locator('input.waffle-range-selection-input:visible').first();
+        await rangeInput.click(); await rangeInput.fill(op.range); await page.keyboard.press('Enter');
+        await page.waitForTimeout(600);
+        await page.click('[role="listbox"][aria-label="Condition"]'); await page.waitForTimeout(700);
+        await page.locator('.goog-menuitem:visible', { hasText: 'Benutzerdefinierte Formel ist' }).first().click();
+        await page.waitForTimeout(800);
+        const f = page.locator('input[aria-label="Wert oder Formel"]:visible').first();
+        await f.click(); await f.fill(op.formula); await page.waitForTimeout(500);
+        await page.click('[role="button"][aria-label="Füllfarbe"]'); await page.waitForTimeout(700);
+        await page.locator(`.docs-material-colorpalette-cell[aria-label="${op.color === 'rot' ? 'Hellrot 3' : op.color}"]:visible`).first().click();
+        await page.waitForTimeout(700);
+        await page.locator('[role="button"]:visible', { hasText: /^Fertig$/ }).first().click();
+        await page.waitForTimeout(1200);
+        await page.locator('[role="button"][aria-label="Schließen"]:visible').first().click().catch(() => {});
+        await page.waitForTimeout(800);
       } else if (op.op === 'plain') {
         await gs.goto(page, `'${s.name}'!${op.range}`);
         await menu(page, '#docs-format-menu', 'Zahl', 'Automatisch');
@@ -144,12 +169,18 @@ async function runOps(page, s) {
 }
 
 async function deleteSheet(page, name) {
-  const tab = page.locator('.docs-sheet-tab', { hasText: name }).first();
+  const tabs = page.locator('.docs-sheet-tab');
+  let tab = null;
+  for (let i = 0; i < await tabs.count(); i++) {
+    const t = (await tabs.nth(i).locator('.docs-sheet-tab-name').innerText()).trim();
+    if (t === name) { tab = tabs.nth(i); break; }
+  }
+  if (!tab) { log('nicht gefunden:', name); return; }
   await tab.click({ button: 'right' });
   await page.waitForTimeout(800);
-  await page.locator('.goog-menuitem:visible', { hasText: 'Löschen' }).first().click();
-  await page.waitForTimeout(800);
-  const ok = page.locator('button:visible', { hasText: 'OK' });
+  await page.locator('.goog-menu:visible .goog-menuitem:visible', { hasText: /^Löschen$/ }).first().click();
+  await page.waitForTimeout(1000);
+  const ok = page.locator('[role="dialog"] button:visible, .modal-dialog button:visible', { hasText: 'OK' });
   if (await ok.count()) await ok.first().click();
   await page.waitForTimeout(1500);
   log('gelöscht:', name);
@@ -193,6 +224,19 @@ async function deleteSheet(page, name) {
           log('Spalte neu:', name, `${colL}${a}:${colL}${b}`);
         }
       }
+      else if (kind === 'plain') {
+        // plain:<Blatt>!<Bereich> – Zahlenformat „Automatisch“ (z. B. wenn Formeln als Text gespeichert wurden)
+        const ref = step.slice(6); await gs.goto(page, ref); await menu(page, '#docs-format-menu', 'Zahl', 'Automatisch'); log('Automatisch:', ref);
+      }
+      else if (kind === 'clear') {
+        // clear:<Blatt> – Inhalte, Formate und Fixierung eines Blatts zurücksetzen
+        await gs.goto(page, `'${arg}'!A1:AZ1000`);
+        await page.keyboard.press('Delete'); await page.waitForTimeout(1500);
+        await page.keyboard.press('Control+Backslash'); await page.waitForTimeout(1500);
+        await menu(page, '#docs-view-menu', 'Fixieren', 'Keine Zeilen');
+        await menu(page, '#docs-view-menu', 'Fixieren', 'Keine Spalten');
+        log('geleert:', arg);
+      }
       else if (kind === 'copyfmt') {
         // copyfmt:<Blatt>:<Quelle>:<Ziel>,<Ziel> – Zelle samt Format (ohne Validierung) kopieren
         const [, name, src, list] = step.split(':');
@@ -202,7 +246,8 @@ async function deleteSheet(page, name) {
           log('kopiert:', name, src, '->', dst);
         }
       }
-      else if (kind === 'delete') await deleteSheet(page, arg);
+      else if (kind === 'delete') { for (const n of arg.split(',')) await deleteSheet(page, n); }
+      else if (kind === 'add') { await page.click('[aria-label="Tabellenblatt hinzufügen"]'); await page.waitForTimeout(2000); await page.locator('.docs-sheet-active-tab .docs-sheet-tab-name').first().dblclick(); await page.waitForTimeout(600); await page.keyboard.press('Control+A'); await page.keyboard.type(arg); await page.keyboard.press('Enter'); await page.waitForTimeout(1500); log('angelegt:', arg); }
     }
     await page.waitForTimeout(5000);
     if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT });

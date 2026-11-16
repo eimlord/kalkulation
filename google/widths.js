@@ -1,5 +1,7 @@
 // Setzt Spaltenbreiten in Pixeln über das Kontextmenü der Spaltenköpfe.
-// Aufruf: VW=4200 node google/widths.js <Blatt> <A=45,B=55,...> [Basisbreite]
+// Aufruf: VW=4200 [HIDE=A:A,W:W] node google/widths.js <Blatt> <A=45,B=55,...> [Basisbreite]
+// Ausgeblendete Spalten werden vorher eingeblendet (sonst stimmen die Positionen nicht)
+// und danach wieder ausgeblendet, wenn HIDE sie nennt.
 const gs = require('./gs.js');
 const sheet = process.argv[2];
 const spec = Object.fromEntries(process.argv[3].split(',').map(x => x.split('=')).map(([c, w]) => [c, Number(w)]));
@@ -25,6 +27,8 @@ async function setWidth(page, x, px) {
   await gs.goto(page, `'${sheet}'!A1`);
   await gs.goto(page, `'${sheet}'!A:${name(last)}`);
   await page.waitForTimeout(600);
+  await page.keyboard.press('Control+Shift+0');            // ausgeblendete Spalten einblenden
+  await page.waitForTimeout(1200);
   await setWidth(page, ROWHEAD + base / 2, base);          // alle Spalten auf Basisbreite
   const widths = {}; for (let i = 1; i <= last; i++) widths[i] = base;
   for (let i = 1; i <= last; i++) {
@@ -37,6 +41,12 @@ async function setWidth(page, x, px) {
     await setWidth(page, x + widths[i] / 2, want);
     widths[i] = want;
     console.log(sheet, name(i), want);
+  }
+  for (const r of (process.env.HIDE || '').split(',').filter(Boolean)) {
+    await gs.goto(page, `'${sheet}'!${r}`);
+    await page.keyboard.press('Control+Alt+0');
+    await page.waitForTimeout(1200);
+    console.log(sheet, 'ausgeblendet', r);
   }
   await gs.goto(page, `'${sheet}'!A1`);
   await page.waitForTimeout(1500);
