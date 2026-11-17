@@ -168,7 +168,7 @@ async function dropdown(page, op) {
 
 // Füllfarbe in der Seitenleiste „Bedingte Formatierung“ (nicht der Füllfarbe-Knopf der Symbolleiste)
 async function cfFill(page, color) {
-  await page.click('.waffle-conditionalformat-custom-toolbar [aria-label="Füllfarbe"]'); await page.waitForTimeout(700);
+  await page.locator('.waffle-conditionalformat-custom-toolbar [aria-label="Füllfarbe"]:visible').first().click(); await page.waitForTimeout(700);
   await page.locator(`.docs-material-colorpalette-cell[aria-label="${!color || color === 'rot' ? 'Hellrot 3' : color}"]:visible`).first().click();
   await page.waitForTimeout(700);
 }
@@ -240,7 +240,7 @@ async function runOps(page, s) {
         const rangeInput = page.locator('input.waffle-range-selection-input:visible').first();
         await rangeInput.click(); await rangeInput.fill(op.range); await page.keyboard.press('Enter');
         await page.waitForTimeout(600);
-        await page.click('[role="listbox"][aria-label="Condition"]'); await page.waitForTimeout(700);
+        await page.locator('[role="listbox"][aria-label="Condition"]:visible').first().click(); await page.waitForTimeout(700);
         await page.locator('.goog-menuitem:visible', { hasText: 'Benutzerdefinierte Formel ist' }).first().click();
         await page.waitForTimeout(800);
         const f = page.locator('input[aria-label="Wert oder Formel"]:visible').first();
