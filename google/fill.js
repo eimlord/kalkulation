@@ -93,6 +93,7 @@ async function resetSheet(page, s) {
   await gs.goto(page, ref);
   await menu(page, '#docs-format-menu', 'Bedingte Formatierung');
   await page.waitForTimeout(2000);
+  await cancelNewRule(page);
   const rules = page.locator('.waffle-conditionalformat-rule-list [role="option"]:visible');
   try {
     for (let i = 0; i < 20 && await rules.count(); i++) {
@@ -102,8 +103,7 @@ async function resetSheet(page, s) {
     }
   } catch (e) { log('bedingte Formatierung: keine Regeln gelöscht'); }
   // ohne Regeln öffnet die Seitenleiste direkt eine neue Regel: abbrechen, damit keine leere Regel entsteht
-  await page.locator('[role="button"]:visible', { hasText: /^Abbrechen$/ }).first().click({ timeout: 3000 }).catch(() => {});
-  await page.waitForTimeout(800);
+  await cancelNewRule(page);
   await page.locator('[role="button"][aria-label="Schließen"]:visible').first().click({ timeout: 3000 }).catch(() => {});
   await page.waitForTimeout(800);
   await gs.goto(page, `'${s.name}'!A1`);
@@ -164,6 +164,16 @@ async function dropdown(page, op) {
   }
   await page.locator('[role="button"]:visible', { hasText: 'Fertig' }).first().click();
   await page.waitForTimeout(1500);
+}
+
+// Öffnet die Seitenleiste auf einem Blatt ohne Regeln, legt Google sofort eine neue Regel an.
+// „Abbrechen“ verwirft sie (Escape oder Schließen würden sie behalten).
+async function cancelNewRule(page) {
+  const editor = page.locator('[role="listbox"]:is([aria-label="Condition"],[aria-label="Bedingung"]):visible');
+  if (await editor.count()) {
+    await page.locator('[role="button"]:visible', { hasText: /^Abbrechen$/ }).first().click({ timeout: 3000 }).catch(() => {});
+    await page.waitForTimeout(1000);
+  }
 }
 
 // Füllfarbe in der Seitenleiste „Bedingte Formatierung“ (nicht der Füllfarbe-Knopf der Symbolleiste)
@@ -233,14 +243,14 @@ async function runOps(page, s) {
         await gs.goto(page, `'${s.name}'!${op.range}`);
         await menu(page, '#docs-format-menu', 'Bedingte Formatierung');
         await page.waitForTimeout(2000);
-        if (!(await page.locator('[role="listbox"][aria-label="Condition"]:visible').count())) {
+        if (!(await page.locator('[role="listbox"]:is([aria-label="Condition"],[aria-label="Bedingung"]):visible').count())) {
           await page.locator('[role="button"]:visible', { hasText: 'Weitere Regel hinzufügen' }).first().click();
           await page.waitForTimeout(1500);
         }
         const rangeInput = page.locator('input.waffle-range-selection-input:visible').first();
         await rangeInput.click(); await rangeInput.fill(op.range); await page.keyboard.press('Enter');
         await page.waitForTimeout(600);
-        await page.locator('[role="listbox"][aria-label="Condition"]:visible').first().click(); await page.waitForTimeout(700);
+        await page.locator('[role="listbox"]:is([aria-label="Condition"],[aria-label="Bedingung"]):visible').first().click(); await page.waitForTimeout(700);
         await page.locator('.goog-menuitem:visible', { hasText: 'Benutzerdefinierte Formel ist' }).first().click();
         await page.waitForTimeout(800);
         const f = page.locator('input[aria-label="Wert oder Formel"]:visible').first();
@@ -339,6 +349,7 @@ async function deleteSheet(page, name) {
         await gs.goto(page, ref);
         await menu(page, '#docs-format-menu', 'Bedingte Formatierung');
         await page.waitForTimeout(2000);
+        await cancelNewRule(page);
         const opt = page.locator('.waffle-conditionalformat-rule-list [role="option"]:visible', { hasText: text });
         let n = 0;
         while (await opt.count() && n < 10) {
