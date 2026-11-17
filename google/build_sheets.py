@@ -550,7 +550,7 @@ def build(template, positions_path, inputs=None):
     checks = [
         (33, "Überschreitungsreserve im Rahmen",
          f"=IF(OR({UER}<{K['UER_MIN']};{UER}>IF(AND({ISOEFI};N({BOND})>0);10%;{K['UER_MAX']}));\"außerhalb \"&TEXT({K['UER_MIN']};\"0 %\")&\" bis \"&TEXT({K['UER_MAX']};\"0 %\");\"OK\")"),
-        (34, "Herstellungsleitung (FISA+ max. 2,5 % FK)", f"=IF({ISFISA};IF($B${ZR['hl']}>{K['HL_MAX']};\"zu hoch: \"&TEXT($B${ZR['hl']};\"0,00 %\");\"OK\");\"–\")"),
+        (34, "Herstellungsleitung (FISA+ max. 2,5 % FK)", f"=IF({ISFISA};IF($B${ZR['hl']}>{K['HL_MAX']};\"zu hoch: \"&TEXT($B${ZR['hl']};\"0.00 %\");\"OK\");\"–\")"),
         (35, "Honorar Produzent*in höchstens laut Förderstelle",
          f"=IF({ph_used}>$B${ZR['ph_max']}+0,5;\"zu hoch: \"&TEXT({ph_used};\"#,##0 €\")&\" (höchstens \"&TEXT($B${ZR['ph_max']};\"#,##0 €\")&\")\";\"OK\")"),
         (36, "förderbare Kosten über Mindestbetrag (FISA+)",
@@ -560,7 +560,7 @@ def build(template, positions_path, inputs=None):
         (38, "Mediendienstanbieter mind. 30 % der HK (FISA+)",
          f"=IF({ISFISA};IF({FINS}!$B$8<{K['MDA_MIN']};\"nur \"&TEXT({FINS}!$B$8;\"0 %\");\"OK\");\"–\")"),
         (39, "Eigenanteil mind. 2,5 % der HK",
-         f"=IF({FINS}!$B$9<{K['EIGEN']};\"nur \"&TEXT({FINS}!$B$9;\"0,0 %\");\"OK\")"),
+         f"=IF({FINS}!$B$9<{K['EIGEN']};\"nur \"&TEXT({FINS}!$B$9;\"0.0 %\");\"OK\")"),
         (40, "Werkstattprojekt: Stufe passt zur HK (ÖFI)",
          f"=IF(OR({ISFISA};{WERKSTATT}=\"nein\";{WERKSTATT}=\"\");\"–\";IF($B$22>IF({WERKSTATT}=\"Werkstatt-KV\";{K['WS1']};{K['WS2']});"
          f"\"HK über \"&TEXT(IF({WERKSTATT}=\"Werkstatt-KV\";{K['WS1']};{K['WS2']});\"#,##0 €\");\"OK\"))"),
@@ -588,12 +588,12 @@ def build(template, positions_path, inputs=None):
         (ZR["basis"], "Fertigungskosten AT ohne Honorar", "=" + basis, "Basis für das Honorar"),
         (ZR["ph_max"], "Honorar: Höchstwert der Förderstelle", ph_max,
          "FISA+ 5 % der FK; ÖFI-Staffel ohne Zirkelbezug gelöst (BMWKMS: 5 % der HK)"),
-        (ZR["rs_db"], "ÖFI: Richtsatz Drehbuch", f"=LET(n;$F$16;rs;ROUND(IF(n<=200000;n*12%;IF(n<=500000;24000+(n-200000)*5%;IF(n<=800000;39000+(n-500000)*3%;"
-             f"IF(n<=2800000;48000+(n-800000)*2%;IF(n<=6000000;88000+(n-2800000)*1%;n*2%)))));-1);IF({DEBUT_DB}=TRUE();ROUND(rs*{K['DEBUT']};-1);rs))",
-         "auf die Fertigungskosten gesamt; Debut 85 %"),
-        (ZR["rs_re"], "ÖFI: Richtsatz Regie", f"=LET(n;$F$16;rs;ROUND(IF(n<=200000;n*18%;IF(n<=300000;36000+(n-200000)*6%;IF(n<=600000;42000+(n-300000)*4%;"
+        (ZR["rs_db"], "ÖFI: Richtsatz Drehbuch", f"=IF({ISFISA};\"\";LET(n;$F$16;rs;ROUND(IF(n<=200000;n*12%;IF(n<=500000;24000+(n-200000)*5%;IF(n<=800000;39000+(n-500000)*3%;"
+             f"IF(n<=2800000;48000+(n-800000)*2%;IF(n<=6000000;88000+(n-2800000)*1%;n*2%)))));-1);IF({DEBUT_DB}=TRUE();ROUND(rs*{K['DEBUT']};-1);rs)))",
+         "nur ÖFI; auf die Fertigungskosten gesamt; Debut 85 %"),
+        (ZR["rs_re"], "ÖFI: Richtsatz Regie", f"=IF({ISFISA};\"\";LET(n;$F$16;rs;ROUND(IF(n<=200000;n*18%;IF(n<=300000;36000+(n-200000)*6%;IF(n<=600000;42000+(n-300000)*4%;"
              f"IF(n<=2400000;54000+(n-600000)*3%;IF(n<=3000000;108000+(n-2400000)*2%;IF(n<=4500000;120000+(n-3000000)*1%;n*3%))))));-1);"
-             f"IF({DEBUT_RE}=TRUE();ROUND(rs*{K['DEBUT']};-1);rs))", "auf die Fertigungskosten gesamt; Debut 85 %"),
+             f"IF({DEBUT_RE}=TRUE();ROUND(rs*{K['DEBUT']};-1);rs)))", "nur ÖFI; auf die Fertigungskosten gesamt; Debut 85 %"),
         (ZR["abz_db"], "ÖFI: Abzug Drehbuch (Vorförderung über Freibetrag)",
          f"=MAX(0;SUMIFS({PO['Plan brutto']};{PO['Nr.']};\"1.1a\")-{K['FREIBETRAG']})", "Pos. 1.1a abzüglich 15.000 €"),
         (ZR["abz_re"], "ÖFI: Abzug Regie (Vorförderung über Freibetrag)",
