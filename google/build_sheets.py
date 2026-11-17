@@ -110,7 +110,7 @@ def build(template, positions_path, inputs=None):
         ("Format", "Film", "Film oder Serie (FISA+: Höchstbetrag und Mindest-HK)"),
         ("Anzahl Folgen", "1", "bei Serie: Anzahl der Folgen der Staffel"),
         ("Filmart", "Spielfilm", "Spielfilm oder Dokumentarfilm"),
-        ("Werkstattprojekt (§ 19 KV)", "", "ÖFI: Werkstatt-KV bis HK 1,22 Mio. €, halber KV bis 1,57 Mio. €"),
+        ("Werkstattprojekt (§ 19 KV)", "nein", "ÖFI: Werkstatt-KV bis HK 1,22 Mio. €, halber KV bis 1,57 Mio. € (Prüfung in der Zusammenfassung)"),
         ("gefördert durch BMWKMS/if", "", "ÖFI: FGK 7,5 %, Honorar 5 % der HK; Voraussetzung für ÖFI+"),
         ("Debutfilm (Regie)", "", "ÖFI: Regie-Richtsatz 85 %"),
         ("Debut (Drehbuch)", "", "ÖFI: Drehbuch-Richtsatz 85 %"),
@@ -144,7 +144,8 @@ def build(template, positions_path, inputs=None):
     ISOEFI = f"{FST}=\"ÖFI\""
     rr = {label: 3 + i for i, (label, *_ ) in enumerate(fields)}
     pr.ops += [
-        {"op": "checkbox", "range": f"B{rr['Werkstattprojekt (§ 19 KV)']}:B{rr['Gender Gap Financing beantragt']}"},
+        {"op": "checkbox", "range": f"B{rr['gefördert durch BMWKMS/if']}:B{rr['Gender Gap Financing beantragt']}"},
+        {"op": "dropdown", "range": f"B{rr['Werkstattprojekt (§ 19 KV)']}", "options": ["nein", "Werkstatt-KV", "halber KV"]},
         {"op": "dropdown", "range": f"B{rr['Förderstelle (Regelwerk)']}", "options": FOERDERSTELLEN},
         {"op": "dropdown", "range": f"B{rr['Format']}", "options": ["Film", "Serie"]},
         {"op": "dropdown", "range": f"B{rr['Filmart']}", "options": ["Spielfilm", "Dokumentarfilm"]},
@@ -357,8 +358,7 @@ def build(template, positions_path, inputs=None):
                f"=IF(OR({art}<>\"Stab\";{f('KV-Funktion')}=\"\");\"\";"
                f"LET(kv;SUMIFS('KV'!$E:$E;'KV'!$A:$A;{f('KV-Funktion')};'KV'!$H:$H;TRUE());"
                f"ws;SUMIFS('KV'!$E:$E;'KV'!$A:$A;\"Werkstattprojekt (§ 19 KV)\";'KV'!$H:$H;TRUE());"
-               f"hk;'Zusammenfassung'!$B$22;"
-               f"grund;IF(AND({ISOEFI};{WERKSTATT}=TRUE());IF(hk<={K['WS1']};ws;IF(hk<={K['WS2']};kv/2;kv));kv);"
+               f"grund;IF({ISOEFI};IF({WERKSTATT}=\"Werkstatt-KV\";ws;IF({WERKSTATT}=\"halber KV\";kv/2;kv));kv);"
                f"einh;{einh};"
                f"faktor;IF(einh=\"wochen40h\";1;IF(einh=\"wochen60h\";{K['F_60H']};IF(einh=\"tage\";0,2;0)));"
                f"IF(OR(grund=0;faktor=0);\"\";grund*faktor)))", CALC)
@@ -561,6 +561,9 @@ def build(template, positions_path, inputs=None):
          f"=IF({ISFISA};IF({FINS}!$B$8<{K['MDA_MIN']};\"nur \"&TEXT({FINS}!$B$8;\"0 %\");\"OK\");\"–\")"),
         (39, "Eigenanteil mind. 2,5 % der HK",
          f"=IF({FINS}!$B$9<{K['EIGEN']};\"nur \"&TEXT({FINS}!$B$9;\"0,0 %\");\"OK\")"),
+        (40, "Werkstattprojekt: Stufe passt zur HK (ÖFI)",
+         f"=IF(OR({ISFISA};{WERKSTATT}=\"nein\";{WERKSTATT}=\"\");\"–\";IF($B$22>IF({WERKSTATT}=\"Werkstatt-KV\";{K['WS1']};{K['WS2']});"
+         f"\"HK über \"&TEXT(IF({WERKSTATT}=\"Werkstatt-KV\";{K['WS1']};{K['WS2']});\"#,##0 €\");\"OK\"))"),
     ]
     for r, label, formula in checks:
         zs.set(r, 1, label)
@@ -664,7 +667,7 @@ def build(template, positions_path, inputs=None):
                {"op": "percent", "range": f"C{gh + 1}:C{gh + 3}"},
                {"op": "currency", "range": f"B{dh + 1}:F{dsum}"}, {"op": "percent", "range": f"G{dh + 1}:G{dsum - 1}"},
                {"op": "cf_formula", "range": "A2:B2", "formula": "=$B$2>0", "color": "rot"},
-               {"op": "cf_formula", "range": "B33:B39", "formula": "=AND(B33<>\"OK\";B33<>\"–\")", "color": "rot"},
+               {"op": "cf_formula", "range": "B33:B40", "formula": "=AND(B33<>\"OK\";B33<>\"–\")", "color": "rot"},
                {"op": "freeze", "rows": 3}]
 
     # ================================================================ Finanzierung
