@@ -35,6 +35,26 @@ CALC = {"bg": "#f8f9fa"}
 TITLE = {"bold": True, "size": 14}
 NOTE = {"color": "#5f6368", "italic": True}
 INPUT = {"bg": "#fff8e1"}
+DEPT = {"bold": True, "bg": "#f1f3f4"}
+
+# Departments in Gruppe 3 (ÖFI-Reihenfolge): Name, erste Nr., erste Nr. des nächsten Departments
+DEPARTMENTS = [("Produktion", 13, 24), ("Regie", 24, 28), ("Kamera", 28, 38), ("Ton", 38, 43),
+               ("Schnitt & Post", 43, 47), ("Kostüm", 47, 53), ("Requisite", 53, 57), ("Szenenbild", 57, 59),
+               ("Maske", 59, 65), ("Fahrer", 65, 69), ("Licht", 69, 75), ("Bühne", 75, 79),
+               ("Musik & Sonstige", 79, 82), ("Cast", 82, 84), ("Sonstige Kosten", 84, 89),
+               ("Honorare & Dienstleister", 89, 95)]
+
+# Zeilen der Zusammenfassung, auf die andere Blätter verweisen
+ZR = {"ph_oefi": 42, "basis": 43, "ph_max": 44, "rs_db": 45, "rs_re": 46, "abz_db": 47, "abz_re": 48,
+      "ueber": 49, "hl": 50, "lnk_head": 52, "lnk_first": 53, "lnk_sum": 59, "gender_head": 61, "dep_head": 66}
+
+
+def department(nr):
+    try:
+        x = float(str(nr).lstrip("'"))
+    except ValueError:
+        return None
+    return next((name for name, a, b in DEPARTMENTS if a <= x < b), None)
 
 
 class Sheet:
@@ -99,6 +119,8 @@ def build(template, positions_path, inputs=None):
         ("Bundesland der Betriebsstätte", "Wien", "bestimmt DZ-Satz; U-Bahn-Abgabe nur bei Wien"),
         ("Stichtag für Sätze", "01.01.2027", "z. B. Drehbeginn: gilt für KV-Gagen und alle Sätze"),
         ("Überschreitungsreserve", "5%", "FISA+: bis 8 %; ÖFI: 5 % Pflicht, bis 8 % (10 % mit Bond)"),
+        ("Honorar Produzent*in (Anteil der FK)", "5%",
+         "auf die Fertigungskosten ohne Honorar; 0 % oder leer = kein Honorar; Höchstwert FISA+ 5 %, ÖFI Staffel (Prüfung in der Zusammenfassung)"),
         ("Completion Bond", "", ""),
         ("Finanzierungskosten", "", ""),
         ("Kostenstand per", "", ""),
@@ -117,6 +139,7 @@ def build(template, positions_path, inputs=None):
     GREEN, GGF = P["Green Bonus beantragt"], P["Gender Gap Financing beantragt"]
     LAND, STICHTAG, UER = P["Bundesland der Betriebsstätte"], P["Stichtag für Sätze"], P["Überschreitungsreserve"]
     BOND, FIN = P["Completion Bond"], P["Finanzierungskosten"]
+    PHP = f"N({P['Honorar Produzent*in (Anteil der FK)']})"
     ISFISA = f"{FST}=\"FISA+\""
     ISOEFI = f"{FST}=\"ÖFI\""
     rr = {label: 3 + i for i, (label, *_ ) in enumerate(fields)}
@@ -126,7 +149,7 @@ def build(template, positions_path, inputs=None):
         {"op": "dropdown", "range": f"B{rr['Format']}", "options": ["Film", "Serie"]},
         {"op": "dropdown", "range": f"B{rr['Filmart']}", "options": ["Spielfilm", "Dokumentarfilm"]},
         {"op": "dropdown", "range": f"B{rr['Bundesland der Betriebsstätte']}", "options": [b for b, _ in BUNDESLAENDER]},
-        {"op": "percent", "range": f"B{rr['Überschreitungsreserve']}"},
+        {"op": "percent", "range": f"B{rr['Überschreitungsreserve']}:B{rr['Honorar Produzent*in (Anteil der FK)']}"},
         {"op": "currency", "range": f"B{rr['Completion Bond']}:B{rr['Finanzierungskosten']}"},
     ]
 
@@ -246,20 +269,20 @@ def build(template, positions_path, inputs=None):
 
     # ================================================================ Positionen
     po = Sheet("Positionen")
-    cols = ["Gr.", "Nr.", "Position", "Name / Beschreibung", "Partner", "Menge", "Einheit", "Preis",
-            "Wochen 60 h", "Wochengage 60 h", "ILV", "M/W", "Plan brutto", "LNK", "Plan gesamt",
-            "Anteil förderbar", "förderbar", "Prüfung", "Ist", "noch zu erwarten", "Endkosten", "± zu Plan",
-            "Art", "KV-Funktion", "KV-Mindestgage 40 h", "Abw. zu KV", "ohne U-Bahn-Abgabe",
-            "Hilfe: U-Bahn-Abgabe", "Hilfe: Menge × Preis", "Hilfe: 60 h"]
+    cols = ["Gr.", "Nr.", "Position", "Name / Beschreibung", "Partner", "KV-Funktion", "Menge", "Einheit", "KV-Gage",
+            "Preis", "ILV", "M/W", "Plan brutto", "LNK", "Plan gesamt", "Anteil förderbar", "förderbar", "Prüfung",
+            "Ist", "noch zu erwarten", "Endkosten", "± zu Plan", "Abw. zu KV", "ohne U-Bahn-Abgabe",
+            "Art", "Department", "Hilfe: U-Bahn-Abgabe", "Hilfe: Gage", "Hilfe: Wochen", "Hilfe: 60 h"]
     C = {name: i + 1 for i, name in enumerate(cols)}
     L = {name: col(i) for name, i in C.items()}
     for c, h in enumerate(cols, 1):
         po.set(1, c, h, HEAD)
-    po.set(2, 3, "Preis: Stab = Wochengage 40 h inkl. SZ/UEL · Cast = Tagesgage · sonst Einzelpreis (ohne Menge = Pauschale). "
+    po.set(2, 3, "Stab: KV-Funktion und Einheit (Wochen 40 h, Wochen 60 h, Tage) wählen, Menge eintragen; Preis leer = KV-Gage, "
+                 "sonst eigene Gage · Cast: Tagesgage · sonst Einzelpreis (ohne Menge = Pauschale). "
                  "Neue Person/Partner: Zeile unter der Position einfügen und nur die Nr. eintragen.", NOTE)
     r = 3
     first_data = r
-    group_rows, rows_meta = [], {}
+    group_rows, dept_rows, rows_meta = [], [], {}
     for g in range(1, 13):
         po.set(r, 1, str(g), GROUP)
         po.set(r, 3, f"{g}. {gnames[g]}", GROUP)
@@ -268,7 +291,19 @@ def build(template, positions_path, inputs=None):
             po.style(r, c, GROUP)
         group_rows.append(r)
         r += 1
+        cur_dept = None
         for p in by_group.get(g, []):
+            dep = department(p["nr"]) if g == 3 else None
+            if dep and dep != cur_dept:
+                # Department-Zwischenzeile mit Zwischensummen
+                po.set(r, 3, dep, DEPT)
+                po.set(r, C["Art"], "Department", DEPT)
+                po.set(r, C["Department"], dep, DEPT)
+                for c in range(1, len(cols) + 1):
+                    po.style(r, c, DEPT)
+                dept_rows.append(r)
+                cur_dept = dep
+                r += 1
             po.set(r, 2, "'" + p["nr"])
             po.set(r, 3, p["bezeichnung"])
             rows_meta[r] = p
@@ -276,7 +311,7 @@ def build(template, positions_path, inputs=None):
             if art in ("Kosten", "Stab", "Cast", "Info"):
                 po.set(r, C["Partner"], "AT", INPUT)
             if art == "Stab":
-                po.set(r, C["Einheit"], "Wochen 40 h")
+                po.set(r, C["Einheit"], "Wochen 40 h", INPUT)
             elif art == "Cast":
                 po.set(r, C["Einheit"], "Drehtage")
             elif art == "Kosten":
@@ -295,29 +330,49 @@ def build(template, positions_path, inputs=None):
     UEB = f"'{UE}'!$B:$B"
     UE_ART = f"'{UE}'!$U:$U"
     UE_KV = f"'{UE}'!$V:$V"
+    UE_DEP = f"'{UE}'!$W:$W"
+    boundaries = sorted(group_rows + dept_rows)
+    SUMCOLS = ("Plan brutto", "LNK", "Plan gesamt", "förderbar", "Ist", "noch zu erwarten", "Endkosten", "± zu Plan")
+    NOSUM = "\"<>Gruppe\";{a};\"<>Department\";{a};\"<>Info\""
 
     for rr_ in range(first_data, last + 1):
         f = lambda name: f"{L[name]}{rr_}"
         art = f("Art")
-        if rr_ in group_rows:
-            nxt = next((g for g in group_rows if g > rr_), last + 1)
+        if rr_ in boundaries:
+            # Gruppe: Block bis zur nächsten Gruppenzeile; Department: bis zur nächsten Gruppen- oder Department-Zeile
+            stops = group_rows if rr_ in group_rows else boundaries
+            nxt = next((b for b in stops if b > rr_), last + 1)
+            style = GROUP if rr_ in group_rows else DEPT
             blk = lambda name: f"{L[name]}{rr_ + 1}:{L[name]}{nxt}"
-            for name in ("Plan brutto", "LNK", "Plan gesamt", "förderbar", "Endkosten"):
-                po.set(rr_, C[name], f"=SUMIFS({blk(name)};{blk('Art')};\"<>Gruppe\";{blk('Art')};\"<>Info\")", GROUP)
+            for name in SUMCOLS:
+                po.set(rr_, C[name], f"=SUMIFS({blk(name)};{blk('Art')};" + NOSUM.format(a=blk('Art')) + ")", style)
             continue
-        # Gr., Art und KV-Funktion automatisch aus der Nr.
+        # Gr., Art, KV-Funktion und Department automatisch aus der Nr.
         po.set(rr_, C["Gr."], f"=IFERROR(INDEX({UEA};MATCH($B{rr_};{UEB};0));\"\")", CALC)
         po.set(rr_, C["Art"], f"=IF($B{rr_}=\"\";\"\";IFERROR(INDEX({UE_ART};MATCH($B{rr_};{UEB};0));\"Kosten\"))", CALC)
+        po.set(rr_, C["Department"], f"=IF($B{rr_}=\"\";\"\";IFERROR(INDEX({UE_DEP};MATCH($B{rr_};{UEB};0))&\"\";\"\"))", CALC)
         po.set(rr_, C["KV-Funktion"], f"=IFERROR(INDEX({UE_KV};MATCH($B{rr_};{UEB};0))&\"\";\"\")", CALC)
+        einh = f"LOWER(SUBSTITUTE({f('Einheit')};\" \";\"\"))"
+        po.set(rr_, C["KV-Gage"],
+               f"=IF(OR({art}<>\"Stab\";{f('KV-Funktion')}=\"\");\"\";"
+               f"LET(kv;SUMIFS('KV'!$E:$E;'KV'!$A:$A;{f('KV-Funktion')};'KV'!$H:$H;TRUE());"
+               f"ws;SUMIFS('KV'!$E:$E;'KV'!$A:$A;\"Werkstattprojekt (§ 19 KV)\";'KV'!$H:$H;TRUE());"
+               f"hk;'Zusammenfassung'!$B$22;"
+               f"grund;IF(AND({ISOEFI};{WERKSTATT}=TRUE());IF(hk<={K['WS1']};ws;IF(hk<={K['WS2']};kv/2;kv));kv);"
+               f"einh;{einh};"
+               f"faktor;IF(einh=\"wochen40h\";1;IF(einh=\"wochen60h\";{K['F_60H']};IF(einh=\"tage\";0,2;0)));"
+               f"IF(OR(grund=0;faktor=0);\"\";grund*faktor)))", CALC)
+        po.set(rr_, C["Hilfe: Gage"], f"=IF({f('Preis')}=\"\";N({f('KV-Gage')});N({f('Preis')}))", CALC)
+        po.set(rr_, C["Hilfe: Wochen"], f"=IF(AND({art}=\"Stab\";{einh}=\"tage\");N({f('Menge')})/5;N({f('Menge')}))", CALC)
+        po.set(rr_, C["Hilfe: 60 h"], f"={einh}=\"wochen60h\"", CALC)
         po.set(rr_, C["Plan brutto"],
-               f"=IF(OR({art}=\"Überschrift\";{art}=\"Berechnet\";AND({f('Preis')}=\"\";{f('Wochengage 60 h')}=\"\"));\"\";"
-               f"IF({f('Menge')}=\"\";N({f('Preis')});{f('Menge')}*N({f('Preis')}))+N({f('Wochen 60 h')})*N({f('Wochengage 60 h')}))", CALC)
+               f"=IF(OR({art}=\"Überschrift\";{art}=\"Berechnet\");\"\";"
+               f"IF(AND({f('Preis')}=\"\";OR({f('KV-Gage')}=\"\";N({f('Menge')})=0));\"\";"
+               f"IF({f('Menge')}=\"\";N({f('Preis')});N({f('Menge')})*{f('Hilfe: Gage')})))", CALC)
         ub = f"IF({f('ohne U-Bahn-Abgabe')}=TRUE();0;{K['UBAHN']})"
         po.set(rr_, C["Hilfe: U-Bahn-Abgabe"],
-               f"=IF({art}=\"Stab\";(N({f('Menge')})+N({f('Wochen 60 h')}))*{ub};IF({art}=\"Cast\";N({f('Menge')})/5*{ub};0))", CALC)
-        po.set(rr_, C["Hilfe: Menge × Preis"], f"=IF({f('Preis')}=\"\";0;IF({f('Menge')}=\"\";1;{f('Menge')})*{f('Preis')})", CALC)
-        po.set(rr_, C["Hilfe: 60 h"], f"=N({f('Wochen 60 h')})*N({f('Wochengage 60 h')})", CALC)
-        stab = (f"LET(brutto;N({f('Plan brutto')});wochen;N({f('Menge')})+N({f('Wochen 60 h')});hbgl;{K['SV_HBGL']};"
+               f"=IF({art}=\"Stab\";N({f('Hilfe: Wochen')})*{ub};IF({art}=\"Cast\";N({f('Menge')})/5*{ub};0))", CALC)
+        stab = (f"LET(brutto;N({f('Plan brutto')});wochen;N({f('Hilfe: Wochen')});hbgl;{K['SV_HBGL']};"
                 f"svl;{K['SV_LFD']};svs;{K['SV_SZ']};uel;{K['UEL']};lfd;brutto/((1+1/6)*(1+uel));sonder;lfd/6;"
                 f"svlfd;IF(wochen=0;0;IF(lfd/wochen>hbgl/30*7;wochen*hbgl*svl/30*7;lfd*svl));"
                 f"svsz;IF(sonder>2*hbgl;2*hbgl*svs;sonder*svs);"
@@ -331,42 +386,34 @@ def build(template, positions_path, inputs=None):
                 f"IF(brutto=0;\"\";sv+uelsv+brutto*({K['DB']}+{K['DZ']}+{K['KOMMST']})+{f('Hilfe: U-Bahn-Abgabe')}))")
         po.set(rr_, C["LNK"], f"=IF({art}=\"Stab\";{stab};IF({art}=\"Cast\";{cast};\"\"))", CALC)
         po.set(rr_, C["Plan gesamt"],
-               f"=IF({art}=\"Berechnet\";IF(AND({f('Nr.')}=\"87\";{ISOEFI});'Zusammenfassung'!$B$40;\"\");"
+               f"=IF({art}=\"Berechnet\";IF(AND({f('Nr.')}=\"87\";{ISOEFI});'Zusammenfassung'!$B${ZR['ph_oefi']};\"\");"
                f"IF(AND({f('Plan brutto')}=\"\";{f('LNK')}=\"\");\"\";N({f('Plan brutto')})+N({f('LNK')})))", CALC)
         po.set(rr_, C["Anteil förderbar"], f"=IF({f('Partner')}=\"AT\";1;0)", INPUT)
         po.set(rr_, C["förderbar"], f"=IF({f('Plan gesamt')}=\"\";\"\";N({f('Plan gesamt')})*N({f('Anteil förderbar')}))", CALC)
-        kvmin = (f"=IF(OR({art}<>\"Stab\";{f('KV-Funktion')}=\"\");\"\";"
-                 f"LET(kv;SUMIFS('KV'!$E:$E;'KV'!$A:$A;{f('KV-Funktion')};'KV'!$H:$H;TRUE());"
-                 f"ws;SUMIFS('KV'!$E:$E;'KV'!$A:$A;\"Werkstattprojekt (§ 19 KV)\";'KV'!$H:$H;TRUE());"
-                 f"hk;'Zusammenfassung'!$B$22;"
-                 f"IF(AND({ISOEFI};{WERKSTATT}=TRUE());IF(hk<={K['WS1']};ws;IF(hk<={K['WS2']};kv/2;kv));kv)))")
-        po.set(rr_, C["KV-Mindestgage 40 h"], kvmin, CALC)
-        kvm = f"N({f('KV-Mindestgage 40 h')})"
+        kvg = f"N({f('KV-Gage')})"
+        gage = f"N({f('Hilfe: Gage')})"
         pr_ = f"N({f('Preis')})"
-        g60 = f"N({f('Wochengage 60 h')})"
-        po.set(rr_, C["Abw. zu KV"],
-               f"=IF({kvm}=0;\"\";IF({pr_}>0;{pr_}/{kvm}-1;IF({g60}>0;{g60}/({kvm}*{K['F_60H']})-1;\"\")))", CALC)
+        po.set(rr_, C["Abw. zu KV"], f"=IF(OR({kvg}=0;N({f('Plan brutto')})=0);\"\";{gage}/{kvg}-1)", CALC)
         ilv = f"{f('ILV')}=TRUE()"
         checks = [
             # beide Förderstellen
-            f"IF(AND({art}=\"Stab\";NOT({ilv});{pr_}>0;{kvm}>0;{pr_}<{kvm});\"unter KV (40 h)\";\"\")",
-            f"IF(AND({art}=\"Stab\";NOT({ilv});{g60}>0;{kvm}>0;{g60}<{kvm}*{K['F_60H']});\"unter KV (60 h)\";\"\")",
+            f"IF(AND({art}=\"Stab\";NOT({ilv});{f('Preis')}<>\"\";{kvg}>0;{pr_}<{kvg});\"unter KV\";\"\")",
+            f"IF(AND({art}=\"Stab\";{f('Preis')}=\"\";N({f('Menge')})>0;{f('KV-Gage')}=\"\");\"keine KV-Gage: KV-Funktion/Einheit prüfen oder Preis eintragen\";\"\")",
             f"IF(AND({f('Gr.')}=12;N({f('Plan brutto')})>0);\"Erträge mit negativem Vorzeichen eintragen\";\"\")",
             f"IF(N({f('Anteil förderbar')})>1;\"Anteil förderbar über 100 %\";\"\")",
             f"IF(AND({f('Nr.')}<>\"\";COUNTIF({UEB};{f('Nr.')})=0);\"Nr. nicht in der Positionsliste\";\"\")",
             f"IF(AND({f('Partner')}<>\"\";N({f('Plan brutto')})<>0;COUNTIF({{\"AT\";\"A\";\"B\";\"C\"}};{f('Partner')})=0);\"Partner AT, A, B oder C\";\"\")",
             # nur ÖFI
-            f"IF(AND({ISOEFI};{art}=\"Stab\";{ilv};{kvm}>0;OR({pr_}>{kvm}*{K['ILV']};{g60}>{kvm}*{K['F_60H']}*{K['ILV']}));\"ILV über 88 % KV\";\"\")",
-            f"IF(AND({ISOEFI};{art}=\"Stab\";{kvm}>0;OR({pr_}>{kvm}*{K['UEBER']};{g60}>{kvm}*{K['F_60H']}*{K['UEBER']}));"
-            f"\"Überzahlung über 10 % (nur mit Begründung)\";\"\")",
+            f"IF(AND({ISOEFI};{art}=\"Stab\";{ilv};{kvg}>0;N({f('Plan brutto')})>0;{gage}>{kvg}*{K['ILV']});\"ILV über 88 % KV\";\"\")",
+            f"IF(AND({ISOEFI};{art}=\"Stab\";{kvg}>0;{pr_}>{kvg}*{K['UEBER']});\"Überzahlung über 10 % (nur mit Begründung)\";\"\")",
             f"IF(AND({ISOEFI};{f('Nr.')}=\"81.0\";{pr_}>IF({ilv};{K['GFC_ILV']};{K['GFC_W']}));\"über Höchstsatz Green Film Consultant\";\"\")",
             f"IF(AND({ISOEFI};{f('Nr.')}=\"94.4\";N({f('Plan brutto')})>{K['MD_MAX']});\"max. 10.000 € anerkannt\";\"\")",
-            f"IF(AND({ISOEFI};{f('Nr.')}=\"4\";N({f('Plan brutto')})>ROUND('Zusammenfassung'!$B$43*IF({ilv};{K['ILV_RS']};1);-1)-'Zusammenfassung'!$B$45);"
+            f"IF(AND({ISOEFI};{f('Nr.')}=\"4\";N({f('Plan brutto')})>ROUND('Zusammenfassung'!$B${ZR['rs_db']}*IF({ilv};{K['ILV_RS']};1);-1)-'Zusammenfassung'!$B${ZR['abz_db']});"
             f"\"über Richtsatz Drehbuch\";\"\")",
-            f"IF(AND({ISOEFI};{f('Nr.')}=\"24\";N({f('Plan brutto')})>ROUND('Zusammenfassung'!$B$44*IF({ilv};{K['ILV_RS']};1);-1)-'Zusammenfassung'!$B$46);"
+            f"IF(AND({ISOEFI};{f('Nr.')}=\"24\";N({f('Plan brutto')})>ROUND('Zusammenfassung'!$B${ZR['rs_re']}*IF({ilv};{K['ILV_RS']};1);-1)-'Zusammenfassung'!$B${ZR['abz_re']});"
             f"\"über Richtsatz Regie\";\"\")",
             # nur FISA+
-            f"IF(AND({ISFISA};{f('Nr.')}=\"13\";'Zusammenfassung'!$B$48>{K['HL_MAX']});\"Herstellungsleitung über 2,5 % der Fertigungskosten\";\"\")",
+            f"IF(AND({ISFISA};{f('Nr.')}=\"13\";'Zusammenfassung'!$B${ZR['hl']}>{K['HL_MAX']});\"Herstellungsleitung über 2,5 % der Fertigungskosten\";\"\")",
         ]
         po.set(rr_, C["Prüfung"], "=TEXTJOIN(\", \";TRUE();" + ";".join(checks) + ")", CALC)
         po.set(rr_, C["Endkosten"], f"=IF(AND({f('Ist')}=\"\";{f('noch zu erwarten')}=\"\");\"\";N({f('Ist')})+N({f('noch zu erwarten')}))", CALC)
@@ -384,17 +431,28 @@ def build(template, positions_path, inputs=None):
         for cname, v in vals.items():
             po.set(target, C[cname], v)
 
-    stab_rows = [r_ for r_, p in rows_meta.items() if p["art"] in ("Stab", "Cast")]
+    def runs(rows_):
+        """zusammenhängende Zeilenbereiche, z. B. [(13, 23), (25, 27)]"""
+        out = []
+        for x in sorted(rows_):
+            if out and x == out[-1][1] + 1:
+                out[-1][1] = x
+            else:
+                out.append([x, x])
+        return out
+
     g3 = [r_ for r_, p in rows_meta.items() if p["gruppe"] == 3]
     g3a, g3b = min(g3), max(g3)
-    money = [rng(n) for n in ("Preis", "Wochengage 60 h", "Plan brutto", "LNK", "Plan gesamt", "förderbar", "Ist",
-                              "noch zu erwarten", "Endkosten", "± zu Plan", "KV-Mindestgage 40 h",
-                              "Hilfe: U-Bahn-Abgabe", "Hilfe: Menge × Preis", "Hilfe: 60 h")]
+    stab_runs = runs(r_ for r_, p in rows_meta.items() if p["art"] == "Stab")
+    money = [rng(n) for n in ("KV-Gage", "Preis", "Plan brutto", "LNK", "Plan gesamt", "förderbar", "Ist",
+                              "noch zu erwarten", "Endkosten", "± zu Plan", "Hilfe: U-Bahn-Abgabe", "Hilfe: Gage")]
     po.ops += [{"op": "text", "range": rng("Nr.")}]
-    # Partner-Auswahl nur in Positionszeilen, nicht in den Gruppenzeilen
+    # Partner-Auswahl je Gruppe (ohne Gruppenzeile); Department-Zeilen werden danach bereinigt
     bounds = group_rows + [last + 1]
     po.ops += [{"op": "dropdown", "range": f"{L['Partner']}{a + 1}:{L['Partner']}{b - 1}", "options": ["AT", "A", "B", "C"]}
                for a, b in zip(bounds, bounds[1:]) if b - 1 >= a + 1]
+    po.ops += [{"op": "dropdown", "range": f"{L['Einheit']}{a}:{L['Einheit']}{b}", "options": ["Wochen 40 h", "Wochen 60 h", "Tage"]}
+               for a, b in stab_runs]
     po.ops += [{"op": "currency", "range": m} for m in money]
     po.ops += [{"op": "percent", "range": rng("Abw. zu KV")}, {"op": "percent", "range": rng("Anteil förderbar")}]
     po.ops += [
@@ -402,10 +460,15 @@ def build(template, positions_path, inputs=None):
         {"op": "checkbox", "range": f"{L['ohne U-Bahn-Abgabe']}{g3a}:{L['ohne U-Bahn-Abgabe']}{g3b}"},
         {"op": "dropdown", "range": f"{L['M/W']}{g3a}:{L['M/W']}{g3b}", "options": ["M", "W"]},
         {"op": "dropdown_range", "range": f"{L['KV-Funktion']}{g3a}:{L['KV-Funktion']}{g3b}", "source": f"='KV'!$A$2:$A${kv_last}"},
+    ]
+    # Department-Zeilen: Auswahlfelder und Kästchen wieder entfernen (leere Zelle im Department-Format darüber kopieren)
+    for d in dept_rows:
+        po.ops += [{"op": "copyfmt", "src": f"D{d}", "dst": f"{L['Partner']}{d}:{L['M/W']}{d}"},
+                   {"op": "copyfmt", "src": f"D{d}", "dst": f"{L['ohne U-Bahn-Abgabe']}{d}"}]
+    po.ops += [
         {"op": "cf_formula", "range": f"B{first_data}:{L['ohne U-Bahn-Abgabe']}{last}", "formula": f"=${L['Prüfung']}{first_data}<>\"\"", "color": "rot"},
         {"op": "freeze", "rows": 1, "cols": 3},
-        {"op": "hide", "range": f"{L['Hilfe: U-Bahn-Abgabe']}:{L['Hilfe: 60 h']}"},
-        {"op": "hide", "range": f"{L['Art']}:{L['Art']}"},
+        {"op": "hide", "range": f"{L['Art']}:{L['Hilfe: 60 h']}"},
         {"op": "hide", "range": "A:A"},
     ]
     PO = {name: f"'Positionen'!${L[name]}${first_data}:${L[name]}" for name in cols}
@@ -426,18 +489,18 @@ def build(template, positions_path, inputs=None):
             base = (f"SUMIFS({PO['Plan brutto']};{PO['Gr.']};{g};{PO['Partner']};\"{pt}\";{PO['Art']};\"<>Info\";{PO['Art']};\"<>Gruppe\")"
                     f"+SUMIFS({PO['LNK']};{PO['Gr.']};{g};{PO['Partner']};\"{pt}\")")
             if g == 3 and pt == "AT":
-                base += f"+IF({ISOEFI};$B$40;0)"
+                base += f"+IF({ISOEFI};$B${ZR['ph_oefi']};0)"
             zs.set(r, 2 + i, "=" + base, CALC)
         zs.set(r, 6, f"=SUM(B{r}:E{r})", CALC)
         zs.set(r, 7, f"=SUMIFS({PO['Endkosten']};{PO['Gr.']};{g};{PO['Art']};\"<>Info\";{PO['Art']};\"<>Gruppe\")", CALC)
         zs.set(r, 8, f"=SUMIFS({PO['± zu Plan']};{PO['Gr.']};{g};{PO['Art']};\"<>Info\";{PO['Art']};\"<>Gruppe\")", CALC)
         zs.set(r, 9, f"=SUMIFS({PO['förderbar']};{PO['Gr.']};{g};{PO['Art']};\"<>Info\";{PO['Art']};\"<>Gruppe\")"
-                     + (f"+IF({ISOEFI};$B$40;0)" if g == 3 else ""), CALC)
+                     + (f"+IF({ISOEFI};$B${ZR['ph_oefi']};0)" if g == 3 else ""), CALC)
     staffel_fgk = ("ROUND(IF(B16>=5000000;375000;IF(B16<=800000;B16*9%;IF(B16<=1200000;72000+(B16-800000)*30000/400000;"
                    "IF(B16<=1600000;102000+(B16-1200000)*26000/400000;IF(B16<=2500000;128000+(B16-1600000)*59500/900000;B16*7,5%)))));-1)")
     rows = [
         (16, "Fertigungskosten (FK)", ["=SUM(B4:B15)", "=SUM(C4:C15)", "=SUM(D4:D15)", "=SUM(E4:E15)"], "=SUM(I4:I15)"),
-        (17, "Honorar Produzent*in (FISA+ Pkt. 14; ÖFI: in Gruppe 3)", [f"=IF({ISFISA};ROUND(B16*{K['PH_MAX']};2);0)", "", "", ""], "=B17"),
+        (17, "Honorar Produzent*in (FISA+ Pkt. 14; ÖFI: in Gruppe 3)", [f"=IF({ISFISA};ROUND(B16*{PHP};2);0)", "", "", ""], "=B17"),
         (18, "Fertigungsgemeinkosten (FGK)", [f"=IF({ISFISA};ROUND(B16*{K['FGK_MAX']};2);IF({BMWKMS}=TRUE();B16*7,5%;{staffel_fgk}))", "", "", ""],
          f"=IF({ISFISA};B18;0)"),
         (19, "Completion Bond", [f"=N({BOND})", "", "", ""], f"=IF({ISFISA};B19;0)"),
@@ -483,100 +546,125 @@ def build(template, positions_path, inputs=None):
     zs.set(32, 2, "Ergebnis", HEAD)
     zs.set(32, 3, "", HEAD)
     FINS = "'Finanzierung'"
+    ph_used = f"IF({ISFISA};$B$17;$B${ZR['ph_oefi']})"
     checks = [
         (33, "Überschreitungsreserve im Rahmen",
          f"=IF(OR({UER}<{K['UER_MIN']};{UER}>IF(AND({ISOEFI};N({BOND})>0);10%;{K['UER_MAX']}));\"außerhalb \"&TEXT({K['UER_MIN']};\"0 %\")&\" bis \"&TEXT({K['UER_MAX']};\"0 %\");\"OK\")"),
-        (34, "Herstellungsleitung (FISA+ max. 2,5 % FK)", f"=IF({ISFISA};IF($B$48>{K['HL_MAX']};\"zu hoch: \"&TEXT($B$48;\"0,00 %\");\"OK\");\"–\")"),
-        (35, "förderbare Kosten über Mindestbetrag (FISA+)",
+        (34, "Herstellungsleitung (FISA+ max. 2,5 % FK)", f"=IF({ISFISA};IF($B${ZR['hl']}>{K['HL_MAX']};\"zu hoch: \"&TEXT($B${ZR['hl']};\"0,00 %\");\"OK\");\"–\")"),
+        (35, "Honorar Produzent*in höchstens laut Förderstelle",
+         f"=IF({ph_used}>$B${ZR['ph_max']}+0,5;\"zu hoch: \"&TEXT({ph_used};\"#,##0 €\")&\" (höchstens \"&TEXT($B${ZR['ph_max']};\"#,##0 €\")&\")\";\"OK\")"),
+        (36, "förderbare Kosten über Mindestbetrag (FISA+)",
          f"=IF({ISFISA};IF($B$25<IF({FILMART}=\"Dokumentarfilm\";{K['MIN_F_DOKU']};{K['MIN_F_SPIEL']});\"unter Mindestbetrag\";\"OK\");\"–\")"),
-        (36, "Gesamt-HK über Mindestbetrag (FISA+)",
+        (37, "Gesamt-HK über Mindestbetrag (FISA+)",
          f"=IF({ISFISA};IF(IF({FORMAT}=\"Serie\";$F$22/MAX(1;N({FOLGEN}))<{K['MIN_HK_FOLGE']};$F$22<{K['MIN_HK_FILM']});\"unter Mindest-HK\";\"OK\");\"–\")"),
-        (37, "Mediendienstanbieter mind. 30 % der HK (FISA+)",
+        (38, "Mediendienstanbieter mind. 30 % der HK (FISA+)",
          f"=IF({ISFISA};IF({FINS}!$B$8<{K['MDA_MIN']};\"nur \"&TEXT({FINS}!$B$8;\"0 %\");\"OK\");\"–\")"),
-        (38, "Eigenanteil mind. 2,5 % der HK",
+        (39, "Eigenanteil mind. 2,5 % der HK",
          f"=IF({FINS}!$B$9<{K['EIGEN']};\"nur \"&TEXT({FINS}!$B$9;\"0,0 %\");\"OK\")"),
     ]
     for r, label, formula in checks:
         zs.set(r, 1, label)
         zs.set(r, 2, formula, CALC)
 
-    zs.set(39, 1, "Berechnete Werte", HEAD)
-    zs.set(39, 2, "", HEAD)
-    zs.set(39, 3, "Erklärung", HEAD)
-    basis = (f"SUMIFS({PO['Plan brutto']};{PO['Partner']};\"AT\";{PO['Art']};\"<>Info\";{PO['Art']};\"<>Gruppe\")"
+    zs.set(ZR["ph_oefi"] - 1, 1, "Berechnete Werte", HEAD)
+    zs.set(ZR["ph_oefi"] - 1, 2, "", HEAD)
+    zs.set(ZR["ph_oefi"] - 1, 3, "Erklärung", HEAD)
+    basis = (f"SUMIFS({PO['Plan brutto']};{PO['Partner']};\"AT\";{PO['Art']};\"<>Info\";{PO['Art']};\"<>Gruppe\";{PO['Art']};\"<>Department\")"
              f"+SUMIFS({PO['LNK']};{PO['Partner']};\"AT\")")
-    ph = (f"=IF({ISFISA};0;IF({BMWKMS}=TRUE();LET(basis;$B$41;ueber;{UER};zusatz;N({BOND})+N({FIN});"
-          f"schaetz;ROUND(0,05*(basis*(1,075+ueber)+zusatz)/(1-0,05*(1,075+ueber));-1);"
-          f"erste;ROUND(0,05*((basis+schaetz)*1,075+ROUND((basis+schaetz)*ueber;-1)+zusatz);-1);"
-          f"zweite;ROUND(0,05*((basis+erste)*1,075+ROUND((basis+erste)*ueber;-1)+zusatz);-1);zweite);"
-          f"LET(basis;$B$41;IF(basis<=180000;basis/9;IF(basis<=925000;(6250+basis*0,06875)/0,93125;"
-          f"IF(basis<=1400000;(25000+basis*0,05)/0,95;IF(basis<=2375000;(62500+basis*0,025)/0,975;"
-          f"IF(basis<=4750000;basis/19;250000))))))))")
+    B_ = f"$B${ZR['basis']}"
+    ph_max = (f"=IF({ISFISA};ROUND($B$16*{K['PH_MAX']};2);IF({BMWKMS}=TRUE();LET(basis;{B_};ueber;{UER};zusatz;N({BOND})+N({FIN});"
+              f"schaetz;ROUND(0,05*(basis*(1,075+ueber)+zusatz)/(1-0,05*(1,075+ueber));-1);"
+              f"erste;ROUND(0,05*((basis+schaetz)*1,075+ROUND((basis+schaetz)*ueber;-1)+zusatz);-1);"
+              f"zweite;ROUND(0,05*((basis+erste)*1,075+ROUND((basis+erste)*ueber;-1)+zusatz);-1);zweite);"
+              f"LET(basis;{B_};IF(basis<=180000;basis/9;IF(basis<=925000;(6250+basis*0,06875)/0,93125;"
+              f"IF(basis<=1400000;(25000+basis*0,05)/0,95;IF(basis<=2375000;(62500+basis*0,025)/0,975;"
+              f"IF(basis<=4750000;basis/19;250000))))))))")
     calc = [
-        (40, "ÖFI: Produzent*innenhonorar (Pos. 87)", ph, "ÖFI-Staffel ohne Zirkelbezug gelöst (BMWKMS: 5 % der HK); bei FISA+ siehe Zeile 17"),
-        (41, "ÖFI: Fertigungskosten AT ohne Honorar", "=" + basis, "Basis für das ÖFI-Honorar"),
-        (42, "", "", ""),
-        (43, "ÖFI: Richtsatz Drehbuch", f"=LET(n;$F$16;rs;ROUND(IF(n<=200000;n*12%;IF(n<=500000;24000+(n-200000)*5%;IF(n<=800000;39000+(n-500000)*3%;"
+        (ZR["ph_oefi"], "ÖFI: Produzent*innenhonorar (Pos. 87)", f"=IF({ISFISA};0;ROUND({B_}*{PHP};2))",
+         "Anteil laut Projekt × Fertigungskosten AT ohne Honorar; bei FISA+ siehe Zeile 17"),
+        (ZR["basis"], "Fertigungskosten AT ohne Honorar", "=" + basis, "Basis für das Honorar"),
+        (ZR["ph_max"], "Honorar: Höchstwert der Förderstelle", ph_max,
+         "FISA+ 5 % der FK; ÖFI-Staffel ohne Zirkelbezug gelöst (BMWKMS: 5 % der HK)"),
+        (ZR["rs_db"], "ÖFI: Richtsatz Drehbuch", f"=LET(n;$F$16;rs;ROUND(IF(n<=200000;n*12%;IF(n<=500000;24000+(n-200000)*5%;IF(n<=800000;39000+(n-500000)*3%;"
              f"IF(n<=2800000;48000+(n-800000)*2%;IF(n<=6000000;88000+(n-2800000)*1%;n*2%)))));-1);IF({DEBUT_DB}=TRUE();ROUND(rs*{K['DEBUT']};-1);rs))",
          "auf die Fertigungskosten gesamt; Debut 85 %"),
-        (44, "ÖFI: Richtsatz Regie", f"=LET(n;$F$16;rs;ROUND(IF(n<=200000;n*18%;IF(n<=300000;36000+(n-200000)*6%;IF(n<=600000;42000+(n-300000)*4%;"
+        (ZR["rs_re"], "ÖFI: Richtsatz Regie", f"=LET(n;$F$16;rs;ROUND(IF(n<=200000;n*18%;IF(n<=300000;36000+(n-200000)*6%;IF(n<=600000;42000+(n-300000)*4%;"
              f"IF(n<=2400000;54000+(n-600000)*3%;IF(n<=3000000;108000+(n-2400000)*2%;IF(n<=4500000;120000+(n-3000000)*1%;n*3%))))));-1);"
              f"IF({DEBUT_RE}=TRUE();ROUND(rs*{K['DEBUT']};-1);rs))", "auf die Fertigungskosten gesamt; Debut 85 %"),
-        (45, "ÖFI: Abzug Drehbuch (Vorförderung über Freibetrag)",
+        (ZR["abz_db"], "ÖFI: Abzug Drehbuch (Vorförderung über Freibetrag)",
          f"=MAX(0;SUMIFS({PO['Plan brutto']};{PO['Nr.']};\"1.1a\")-{K['FREIBETRAG']})", "Pos. 1.1a abzüglich 15.000 €"),
-        (46, "ÖFI: Abzug Regie (Vorförderung über Freibetrag)",
+        (ZR["abz_re"], "ÖFI: Abzug Regie (Vorförderung über Freibetrag)",
          f"=MAX(0;SUMIFS({PO['Plan brutto']};{PO['Nr.']};\"1.1b\")-{K['FREIBETRAG']})", "Pos. 1.1b abzüglich 15.000 €"),
-        (47, "ÖFI: Überzahlungen über 10 % (FRL Pkt. 6.2.3)",
-         f"=IF({ISFISA};0;SUMPRODUCT(({PO['Art']}=\"Stab\")*({PO['KV-Mindestgage 40 h']}<>\"\")*"
-         f"IFERROR(({PO['Preis']}-{PO['KV-Mindestgage 40 h']}*{K['UEBER']})*{PO['Menge']}*(({PO['Preis']}-{PO['KV-Mindestgage 40 h']}*{K['UEBER']})>0);0))"
-         f"+SUMPRODUCT(({PO['Art']}=\"Stab\")*({PO['KV-Mindestgage 40 h']}<>\"\")*"
-         f"IFERROR(({PO['Wochengage 60 h']}-{PO['KV-Mindestgage 40 h']}*{K['F_60H']}*{K['UEBER']})*{PO['Wochen 60 h']}*"
-         f"(({PO['Wochengage 60 h']}-{PO['KV-Mindestgage 40 h']}*{K['F_60H']}*{K['UEBER']})>0);0)))",
+        (ZR["ueber"], "ÖFI: Überzahlungen über 10 % (FRL Pkt. 6.2.3)",
+         f"=IF({ISFISA};0;SUMPRODUCT(({PO['Art']}=\"Stab\")*({PO['KV-Gage']}<>\"\")*"
+         f"IFERROR(({PO['Hilfe: Gage']}-{PO['KV-Gage']}*{K['UEBER']})*{PO['Menge']}*(({PO['Hilfe: Gage']}-{PO['KV-Gage']}*{K['UEBER']})>0);0)))",
          "nur anerkannt, wenn im Finanzierungsplan gedeckt"),
-        (48, "Herstellungsleitung: Anteil an den Fertigungskosten",
+        (ZR["hl"], "Herstellungsleitung: Anteil an den Fertigungskosten",
          f"=IF($B$16=0;0;SUMIFS({PO['Plan gesamt']};{PO['Nr.']};\"13\";{PO['Partner']};\"AT\")/$B$16)", "FISA+: höchstens 2,5 %"),
     ]
     for r, label, formula, note in calc:
-        if not label:
-            continue
         zs.set(r, 1, label)
         zs.set(r, 2, formula, CALC)
         zs.set(r, 3, note, NOTE)
 
-    zs.set(50, 1, "Lohnnebenkosten (Pos. 84)", HEAD)
+    lh, l1, ls = ZR["lnk_head"], ZR["lnk_first"], ZR["lnk_sum"]
+    zs.set(lh, 1, "Lohnnebenkosten (Pos. 84)", HEAD)
     for i, pt in enumerate(partners):
-        zs.set(50, 2 + i, pt, HEAD)
-    zs.set(50, 6, "Gesamt", HEAD)
+        zs.set(lh, 2 + i, pt, HEAD)
+    zs.set(lh, 6, "Gesamt", HEAD)
     for i, pt in enumerate(partners):
         cc = col(2 + i)
         stab = f"SUMIFS({PO['Plan brutto']};{PO['Art']};\"Stab\";{PO['Partner']};\"{pt}\")"
         cast = f"SUMIFS({PO['Plan brutto']};{PO['Art']};\"Cast\";{PO['Partner']};\"{pt}\")"
-        zs.set(52, 2 + i, f"={stab}*{K['MV']}", CALC)
-        zs.set(53, 2 + i, f"=({stab}+{cast})*{K['DB']}", CALC)
-        zs.set(54, 2 + i, f"=({stab}+{cast})*{K['DZ']}", CALC)
-        zs.set(55, 2 + i, f"=({stab}+{cast})*{K['KOMMST']}", CALC)
-        zs.set(56, 2 + i, f"=SUMIFS({PO['Hilfe: U-Bahn-Abgabe']};{PO['Partner']};\"{pt}\")", CALC)
-        zs.set(57, 2 + i, f"=SUMIFS({PO['LNK']};{PO['Partner']};\"{pt}\")", {**CALC, "bold": True})
-        zs.set(51, 2 + i, f"={cc}57-SUM({cc}52:{cc}56)", CALC)
-    for r, label in [(51, "Sozialversicherung (inkl. SZ/UEL)"), (52, "MV-Beitrag"), (53, "DB"), (54, "DZ"),
-                     (55, "Kommunalsteuer"), (56, "U-Bahn-Abgabe"), (57, "Summe Lohnnebenkosten")]:
-        zs.set(r, 1, label, {"bold": r == 57})
-        zs.set(r, 6, f"=SUM(B{r}:E{r})", {**CALC, "bold": r == 57})
+        zs.set(l1 + 1, 2 + i, f"={stab}*{K['MV']}", CALC)
+        zs.set(l1 + 2, 2 + i, f"=({stab}+{cast})*{K['DB']}", CALC)
+        zs.set(l1 + 3, 2 + i, f"=({stab}+{cast})*{K['DZ']}", CALC)
+        zs.set(l1 + 4, 2 + i, f"=({stab}+{cast})*{K['KOMMST']}", CALC)
+        zs.set(l1 + 5, 2 + i, f"=SUMIFS({PO['Hilfe: U-Bahn-Abgabe']};{PO['Partner']};\"{pt}\")", CALC)
+        zs.set(ls, 2 + i, f"=SUMIFS({PO['LNK']};{PO['Partner']};\"{pt}\")", {**CALC, "bold": True})
+        zs.set(l1, 2 + i, f"={cc}{ls}-SUM({cc}{l1 + 1}:{cc}{l1 + 5})", CALC)
+    for off, label in enumerate(["Sozialversicherung (inkl. SZ/UEL)", "MV-Beitrag", "DB", "DZ", "Kommunalsteuer",
+                                 "U-Bahn-Abgabe", "Summe Lohnnebenkosten"]):
+        r = l1 + off
+        zs.set(r, 1, label, {"bold": r == ls})
+        zs.set(r, 6, f"=SUM(B{r}:E{r})", {**CALC, "bold": r == ls})
 
-    zs.set(59, 1, "Gender-Budgeting (Plan brutto Stab und Cast)", HEAD)
-    zs.set(59, 2, "Betrag", HEAD)
-    zs.set(59, 3, "Anteil", HEAD)
-    for r, label, crit in [(60, "weiblich (W)", "\"W\""), (61, "männlich (M)", "\"M\""), (62, "ohne Angabe", "\"\"")]:
+    gh = ZR["gender_head"]
+    zs.set(gh, 1, "Gender-Budgeting (Plan brutto Stab und Cast)", HEAD)
+    zs.set(gh, 2, "Betrag", HEAD)
+    zs.set(gh, 3, "Anteil", HEAD)
+    for off, (label, crit) in enumerate([("weiblich (W)", "\"W\""), ("männlich (M)", "\"M\""), ("ohne Angabe", "\"\"")], 1):
+        r = gh + off
         zs.set(r, 1, label)
         zs.set(r, 2, f"=SUMIFS({PO['Plan brutto']};{PO['Art']};\"Stab\";{PO['M/W']};{crit})"
                      f"+SUMIFS({PO['Plan brutto']};{PO['Art']};\"Cast\";{PO['M/W']};{crit})", CALC)
-        zs.set(r, 3, f"=IF(SUM($B$60:$B$62)=0;\"\";B{r}/SUM($B$60:$B$62))", CALC)
+        zs.set(r, 3, f"=IF(SUM($B${gh + 1}:$B${gh + 3})=0;\"\";B{r}/SUM($B${gh + 1}:$B${gh + 3}))", CALC)
+
+    # Departments (Gruppe 3): Summen über die Spalte „Department“ der Positionen
+    dh = ZR["dep_head"]
+    for c, h in enumerate(["Departments (3. Gagen, Löhne, Honorare)", "Plan brutto", "LNK", "Plan gesamt",
+                           "Endkosten (brutto)", "± zu Plan", "Anteil an Gruppe 3"], 1):
+        zs.set(dh, c, h, HEAD)
+    for i, (name, *_ ) in enumerate(DEPARTMENTS):
+        r = dh + 1 + i
+        zs.set(r, 1, name)
+        for c, pc in [(2, "Plan brutto"), (3, "LNK"), (4, "Plan gesamt"), (5, "Endkosten"), (6, "± zu Plan")]:
+            zs.set(r, c, f"=SUMIFS({PO[pc]};{PO['Department']};$A{r};{PO['Art']};\"<>Department\")", CALC)
+        zs.set(r, 7, f"=IF($D${dh + len(DEPARTMENTS) + 1}=0;\"\";D{r}/$D${dh + len(DEPARTMENTS) + 1})", CALC)
+    dsum = dh + len(DEPARTMENTS) + 1
+    zs.set(dsum, 1, "Summe Gruppe 3", {"bold": True})
+    for c in range(2, 7):
+        cl = col(c)
+        zs.set(dsum, c, f"=SUM({cl}{dh + 1}:{cl}{dsum - 1})", {**CALC, "bold": True})
+    zs.set(dsum, 7, f"=IF(ROUND(D{dsum}-$F$6;2)=0;\"\";\"Abweichung zu Zeile 6: \"&TEXT(D{dsum}-$F$6;\"#,##0.00 €\"))", NOTE)
+
     zs.ops += [{"op": "currency", "range": "B4:I22"}, {"op": "currency", "range": "B25:B30"},
-               {"op": "currency", "range": "B40:B47"}, {"op": "percent", "range": "B48"},
-               {"op": "currency", "range": "B51:F57"}, {"op": "currency", "range": "B60:B62"},
-               {"op": "percent", "range": "C60:C62"},
+               {"op": "currency", "range": f"B{ZR['ph_oefi']}:B{ZR['ueber']}"}, {"op": "percent", "range": f"B{ZR['hl']}"},
+               {"op": "currency", "range": f"B{l1}:F{ls}"}, {"op": "currency", "range": f"B{gh + 1}:B{gh + 3}"},
+               {"op": "percent", "range": f"C{gh + 1}:C{gh + 3}"},
+               {"op": "currency", "range": f"B{dh + 1}:F{dsum}"}, {"op": "percent", "range": f"G{dh + 1}:G{dsum - 1}"},
                {"op": "cf_formula", "range": "A2:B2", "formula": "=$B$2>0", "color": "rot"},
-               {"op": "cf_formula", "range": "B33:B38", "formula": "=AND(B33<>\"OK\";B33<>\"–\")", "color": "rot"},
+               {"op": "cf_formula", "range": "B33:B39", "formula": "=AND(B33<>\"OK\";B33<>\"–\")", "color": "rot"},
                {"op": "freeze", "rows": 3}]
 
     # ================================================================ Finanzierung
@@ -654,7 +742,7 @@ def build(template, positions_path, inputs=None):
     head = ["Gr.", "Nr.", "Position", "Plan AT", "Wochen 40 h / Menge AT", "Ø Preis AT", "Wochen 60 h AT",
             "Ø Wochengage 60 h AT", "Ist AT", "noch zu erwarten AT", "Plan A", "Ist A", "noch zu erwarten A",
             "Plan B", "Ist B", "noch zu erwarten B", "Plan C", "Ist C", "noch zu erwarten C", "Plan gesamt",
-            "Art (Liste)", "KV-Funktion (Liste)"]
+            "Art (Liste)", "KV-Funktion (Liste)", "Department (Liste)"]
     for c, h in enumerate(head, 1):
         ue.set(1, c, h, HEAD)
     ue.set(2, 3, "Summen je Position im österreichischen Kalkulationsschema (aws/FISA+ und ÖFI). Werte blockweise in den Antrag übertragen.", NOTE)
@@ -671,20 +759,22 @@ def build(template, positions_path, inputs=None):
             ue.set(r, 2, "'" + nr)
             ue.set(r, 3, p["bezeichnung"])
             ue.set(r, 21, p["art"])
+            if g == 3 and department(nr):
+                ue.set(r, 23, department(nr))
             ks, kd = p.get("kv_spielfilm", ""), p.get("kv_doku", "")
             if p["art"] == "Stab" and ks and kd and ks != kd:
                 ue.set(r, 22, f"=IF({FILMART}=\"Dokumentarfilm\";\"{kd}\";\"{ks}\")")
             elif p["art"] == "Stab" and ks:
                 ue.set(r, 22, ks)
             if p["art"] == "Berechnet" and nr == "87":
-                ue.set(r, 4, f"=IF({ISFISA};'Zusammenfassung'!$B$17;'Zusammenfassung'!$B$40)", CALC)
+                ue.set(r, 4, f"=IF({ISFISA};'Zusammenfassung'!$B$17;'Zusammenfassung'!$B${ZR['ph_oefi']})", CALC)
                 ue.set(r, 20, f"=D{r}", CALC)
             elif p["art"] == "Berechnet" and nr == "84":
                 for cc, zc in [(4, "B"), (11, "C"), (14, "D"), (17, "E"), (20, "F")]:
-                    ue.set(r, cc, f"='Zusammenfassung'!${zc}$57", CALC)
+                    ue.set(r, cc, f"='Zusammenfassung'!${zc}${ZR['lnk_sum']}", CALC)
                 r += 1
-                for zr, label in [(51, "Sozialversicherung"), (52, "MV-Beitrag"), (53, "DB"), (54, "DZ"),
-                                  (55, "Kommunalsteuer"), (56, "U-Bahn-Abgabe")]:
+                for zr, label in [(ZR["lnk_first"] + i, lbl) for i, lbl in enumerate(
+                        ["Sozialversicherung", "MV-Beitrag", "DB", "DZ", "Kommunalsteuer", "U-Bahn-Abgabe"])]:
                     ue.set(r, 1, "3")
                     ue.set(r, 3, f"   davon {label}", NOTE)
                     for cc, zc in [(4, "B"), (11, "C"), (14, "D"), (17, "E"), (20, "F")]:
@@ -700,10 +790,12 @@ def build(template, positions_path, inputs=None):
                     ue.set(r, 4, f"=SUMIFS({PO['Plan brutto']};{PO['Nr.']};$B{r}&\".*\";{PO['Partner']};\"AT\")", CALC)
                 else:
                     ue.set(r, 4, s("Plan brutto", "AT"), CALC)
-                    ue.set(r, 5, s("Menge", "AT"), CALC)
-                    ue.set(r, 6, f"=IF(N(E{r})=0;\"\";SUMIFS({PO['Hilfe: Menge × Preis']};{crit};{PO['Partner']};\"AT\")/E{r})", CALC)
-                    ue.set(r, 7, s("Wochen 60 h", "AT"), CALC)
-                    ue.set(r, 8, f"=IF(N(G{r})=0;\"\";SUMIFS({PO['Hilfe: 60 h']};{crit};{PO['Partner']};\"AT\")/G{r})", CALC)
+                    # 40 h bzw. Menge und 60 h getrennt nach Einheit; Stab-Tage zählen als 1/5 Woche
+                    at = f"{crit};{PO['Partner']};\"AT\""
+                    ue.set(r, 5, f"=SUMIFS({PO['Hilfe: Wochen']};{at};{PO['Hilfe: 60 h']};FALSE())", CALC)
+                    ue.set(r, 6, f"=IF(N(E{r})=0;\"\";SUMIFS({PO['Plan brutto']};{at};{PO['Hilfe: 60 h']};FALSE();{PO['Menge']};\"<>\")/E{r})", CALC)
+                    ue.set(r, 7, f"=SUMIFS({PO['Hilfe: Wochen']};{at};{PO['Hilfe: 60 h']};TRUE())", CALC)
+                    ue.set(r, 8, f"=IF(N(G{r})=0;\"\";SUMIFS({PO['Plan brutto']};{at};{PO['Hilfe: 60 h']};TRUE())/G{r})", CALC)
                     ue.set(r, 9, s("Ist", "AT"), CALC)
                     ue.set(r, 10, s("noch zu erwarten", "AT"), CALC)
                     for base, pt in [(11, "A"), (14, "B"), (17, "C")]:
@@ -728,7 +820,7 @@ def build(template, positions_path, inputs=None):
     ue.ops += [{"op": "text", "range": f"B3:B{ue_last}"},
                {"op": "currency", "range": f"D3:D{r}"}, {"op": "currency", "range": f"F3:F{ue_last}"},
                {"op": "currency", "range": f"H3:T{r}"}, {"op": "freeze", "rows": 1, "cols": 3},
-               {"op": "hide", "range": "U:V"}]
+               {"op": "hide", "range": "U:W"}]
 
     return [pr, po, zs, fi, ue, sa, kv]
 

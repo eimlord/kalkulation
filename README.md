@@ -63,13 +63,13 @@ oder **ÖFI**. Sie bestimmt Produzent\*innenhonorar, FGK, Prüfungen und Anreizf
 
 | Blatt | Inhalt |
 | --- | --- |
-| Projekt | Titel, Förderstelle, Format (Film/Serie), Folgen, Filmart, Werkstatt/BMWKMS/Debut, Green Bonus, Gender Gap Financing, Bundesland, Stichtag, Überschreitungsreserve, Bond, Finanzierung; darunter die zum Stichtag und zur Förderstelle gültigen Sätze |
-| Positionen | alle 177 ÖFI-Positionen; je Zeile Partner (AT/A/B/C), Menge, Preis, 60-h-Wochen, ILV, M/W, Plan, LNK, Anteil förderbar, Prüfung, Kostenstand. Gr., Art und KV-Funktion ergeben sich aus der Nr.; Zeilen mit Prüfhinweis sind rot |
-| Zusammenfassung | Anzahl Prüfhinweise; Kostengruppen je Partner; FK, Honorar, FGK, Bond, Finanzierung, Überschreitungsreserve, HK (gesamt und förderbar); Anreizförderung; Prüfungen der Förderstelle; ÖFI-Honorar ohne Zirkelbezug, Richtsätze; LNK-Aufteilung; Gender-Budgeting |
+| Projekt | Titel, Förderstelle, Format (Film/Serie), Folgen, Filmart, Werkstatt/BMWKMS/Debut, Green Bonus, Gender Gap Financing, Bundesland, Stichtag, Überschreitungsreserve, Honorar Produzent\*in (Anteil der FK, 5 % voreingetragen, 0 % möglich), Bond, Finanzierung; darunter die zum Stichtag und zur Förderstelle gültigen Sätze |
+| Positionen | alle 177 ÖFI-Positionen; je Zeile Partner (AT/A/B/C), KV-Funktion, Menge, Einheit, KV-Gage, Preis, ILV, M/W, Plan, LNK, Anteil förderbar, Prüfung, Kostenstand. Stab: Einheit „Wochen 40 h“, „Wochen 60 h“ oder „Tage“ wählen, Menge eintragen; ohne Preis rechnet die Zeile mit der KV-Gage. Gruppe 3 hat Department-Zwischenzeilen mit Zwischensummen. Gr., Art, KV-Funktion und Department ergeben sich aus der Nr.; Zeilen mit Prüfhinweis sind rot |
+| Zusammenfassung | Anzahl Prüfhinweise; Kostengruppen je Partner; FK, Honorar, FGK, Bond, Finanzierung, Überschreitungsreserve, HK (gesamt und förderbar); Anreizförderung; Prüfungen der Förderstelle (inkl. Honorar über Höchstwert); Honorar-Höchstwert (FISA+ 5 %, ÖFI-Staffel ohne Zirkelbezug), Richtsätze; LNK-Aufteilung; Gender-Budgeting; Kosten je Department |
 | Finanzierung | Quellen mit Partner, Betrag, Status (geplant/beantragt/zugesagt/abgelehnt) und Anteil an der HK; Anreizförderung automatisch; Prüfung von Lücke, Eigenanteil und Mediendienstanbieter-Anteil |
-| Übertrag Antrag | Summen je Antragsposition in Formular-Reihenfolge (Wochen und Ø Gage für 40 h/60 h, Ist, noch zu erwarten je Partner); bei FISA+ Honorar und FGK als Pkt. 14/15 |
+| Übertrag Antrag | Summen je Antragsposition in Formular-Reihenfolge (Wochen und Ø Gage für 40 h/60 h nach Einheit, Stab-Tage als 1/5 Woche, Ist, noch zu erwarten je Partner); bei FISA+ Honorar und FGK als Pkt. 14/15 |
 | Sätze | Schlüssel, Bezeichnung, Förderstelle, Bundesland, Wert, gültig ab, Quelle (SV, DB, DZ je Bundesland, KommSt, MV, U-Bahn-Abgabe nur Wien, Diäten, FISA+- und ÖFI-Grenzen) |
-| KV | KV-Mindestgagen je Funktion mit gültig ab; 40 h/60 h/Tag inkl. SZ/UEL |
+| KV | KV-Mindestgagen je Funktion mit gültig ab; 40 h/60 h/Tag inkl. SZ/UEL (Quelle der Spalte „KV-Gage“ in Positionen) |
 
 Erzeugen und befüllen (`google/eingaben.json` enthält Eingaben, die beim Neuaufbau erhalten bleiben):
 
@@ -93,12 +93,13 @@ Weitere Schritte von `fill.js`:
 
 | Schritt | Wirkung |
 | --- | --- |
-| `reset:<Blatt>` | Inhalte, Formatierung, Datenvalidierung und bedingte Formatierung entfernen (Zahlenformat „Nur Text“ bleibt, dafür `plain`) |
+| `reset:<Blatt>` | Inhalte, Formatierung, Zahlenformat, Datenvalidierung und bedingte Formatierung entfernen |
 | `plain:'<Blatt>'!<Bereich>` | Zahlenformat „Automatisch“, z. B. wenn Formeln als Text gespeichert wurden |
 | `colblock:<Blatt>:<Spalte>:<von>:<bis>` | Zellen einer Spalte samt Format aus der Vorgabe neu einfügen |
 | `check:<Blatt>!<Zelle>,…` | Kästchen einfügen und auf WAHR schalten |
 | `cfrot:'<Blatt>'!<Zelle>` / `cfdel:'<Blatt>'!<Zelle>\|<Text>` | Regeln der bedingten Formatierung rot färben bzw. löschen |
 | `cells:<Blatt>:<Zellen>`, `del:'<Blatt>'!<Bereich>`, `delete:<Blatt>`, `add:<Blatt>` | einzelne Zellen neu einfügen, Bereich leeren, Blatt löschen oder anlegen |
+| `copyfmt:<Blatt>:<Quelle>:<Ziel>` (auch als Bedienschritt `copyfmt`) | Zelle samt Format über einen Bereich kopieren, z. B. um Auswahlfelder aus Department-Zeilen zu entfernen |
 
 `paste` blendet vorher ausgeblendete Spalten ein, sonst rutscht der Inhalt nach rechts.
 Kästchen werden nie per Einfügen von „WAHR“ gesetzt (das ergäbe Text), sondern mit der Leertaste.

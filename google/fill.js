@@ -76,6 +76,8 @@ async function resetSheet(page, s) {
   await gs.goto(page, ref);
   await page.keyboard.press('Delete'); await page.waitForTimeout(1500);
   log('Inhalte gelöscht'); await menu(page, '#docs-format-menu', 'Formatierung entfernen'); log('Formatierung entfernt');
+  // „Formatierung entfernen“ lässt das Zahlenformat „Nur Text“ stehen
+  await gs.goto(page, ref); await menu(page, '#docs-format-menu', 'Zahl', 'Automatisch'); log('Zahlenformat Automatisch');
   // „Formatierung entfernen“ nimmt auch die Datenvalidierung mit; Reste über die Seitenleiste entfernen
   try {
     await gs.goto(page, ref);
@@ -248,6 +250,10 @@ async function runOps(page, s) {
         await page.waitForTimeout(1200);
         await page.locator('[role="button"][aria-label="Schließen"]:visible').first().click().catch(() => {});
         await page.waitForTimeout(800);
+      } else if (op.op === 'copyfmt') {
+        // leere Zelle samt Format (ohne Validierung) über einen Bereich kopieren, z. B. um Auswahlfelder zu entfernen
+        await gs.goto(page, `'${s.name}'!${op.src}`); await page.keyboard.press('Control+C'); await page.waitForTimeout(500);
+        await gs.goto(page, `'${s.name}'!${op.dst}`); await page.keyboard.press('Control+V'); await page.waitForTimeout(900);
       } else if (op.op === 'plain') {
         await gs.goto(page, `'${s.name}'!${op.range}`);
         await menu(page, '#docs-format-menu', 'Zahl', 'Automatisch');
