@@ -64,8 +64,10 @@ oder **ÖFI**. Sie bestimmt Produzent\*innenhonorar, FGK, Prüfungen und Anreizf
 | Blatt | Inhalt |
 | --- | --- |
 | Projekt | Titel, Förderstelle, Format (Film/Serie), Folgen, Filmart, Werkstatt/BMWKMS/Debut, Green Bonus, Gender Gap Financing, Bundesland, Stichtag, Überschreitungsreserve, Honorar Produzent\*in (Anteil der FK, 5 % voreingetragen, 0 % möglich), Bond, Finanzierung; darunter die zum Stichtag und zur Förderstelle gültigen Sätze |
-| Positionen | alle 177 ÖFI-Positionen; je Zeile Partner (AT/A/B/C), KV-Funktion, Menge, Einheit, KV-Gage, Preis, ILV, M/W, Plan, LNK, Anteil förderbar, Prüfung, Kostenstand. Stab: Einheit „Wochen 40 h“, „Wochen 60 h“ oder „Tage“ wählen, Menge eintragen; ohne Preis rechnet die Zeile mit der KV-Gage. Gruppe 3 hat Department-Zwischenzeilen mit Zwischensummen. Gr., Art, KV-Funktion und Department ergeben sich aus der Nr.; Zeilen mit Prüfhinweis sind rot |
-| Zusammenfassung | Anzahl Prüfhinweise; Kostengruppen je Partner; FK, Honorar, FGK, Bond, Finanzierung, Überschreitungsreserve, HK (gesamt und förderbar); Anreizförderung; Prüfungen der Förderstelle (inkl. Honorar über Höchstwert); Honorar-Höchstwert (FISA+ 5 %, ÖFI-Staffel ohne Zirkelbezug), Richtsätze; LNK-Aufteilung; Gender-Budgeting; Kosten je Department |
+| Positionen | alle 177 ÖFI-Positionen; je Zeile Partner (AT/A/B/C), KV-Funktion, Menge, Einheit, KV-Gage, Preis, ILV, M/W, Plan, LNK, Anteil förderbar, Prüfung, Kostenstand. Stab: Einheit „Wochen 40 h“, „Wochen 60 h“ oder „Tage“ wählen, Menge eintragen; ohne Preis rechnet die Zeile mit der KV-Gage. Häkchen „Rechnung“: Rechnungssteller ohne Lohnnebenkosten (Preis netto Pflicht). 15 vorbereitete Darsteller-Zeilen unter Pos. 82, freie Rechnungsleger-Zeilen 94.5–94.14. Gruppe 3 hat Department-Zwischenzeilen mit Zwischensummen. Gr., Art, KV-Funktion und Department ergeben sich aus der Nr.; Zeilen mit Prüfhinweis sind rot |
+| Reisen | Catering-Block (Drehtage × Personen × € + Pauschale) und eine Zeile je Person: km, Flüge, Bahn, Diäten Ortsgebiet/Österreich (netto ÷ 1,1), Diäten Ausland, Nächte; je Partner nach Pos. 160 (Fahrt) und 161 (Aufenthalt), je Department in die Zusammenfassung |
+| Motive | eine Zeile je Motiv/Set: Motivgebühr, Abgaben & Halteverbote, Nebenräume (→ 116), Absperrhilfen (117), Strom (118), Baumaterial (114/115), Requisiten (122/123), Spielfahrzeuge (128), Stunts/SFX (129); die gespeisten Positionen rechnen Summe aus dem Blatt plus eigene Eingabe |
+| Zusammenfassung | Anzahl Prüfhinweise; Kostengruppen je Partner; FK, Honorar, FGK, Bond, Finanzierung, Überschreitungsreserve, HK (gesamt und förderbar); Anreizförderung; Prüfungen der Förderstelle (inkl. Honorar über Höchstwert); Honorar-Höchstwert (FISA+ 5 %, ÖFI-Staffel ohne Zirkelbezug), Richtsätze; LNK-Aufteilung; Gender-Budgeting; Kosten je Department inkl. Reise & Aufenthalt |
 | Finanzierung | Quellen mit Partner, Betrag, Status (geplant/beantragt/zugesagt/abgelehnt) und Anteil an der HK; Anreizförderung automatisch; Prüfung von Lücke, Eigenanteil und Mediendienstanbieter-Anteil |
 | Übertrag Antrag | Summen je Antragsposition in Formular-Reihenfolge (Wochen und Ø Gage für 40 h/60 h nach Einheit, Stab-Tage als 1/5 Woche, Ist, noch zu erwarten je Partner); bei FISA+ Honorar und FGK als Pkt. 14/15 |
 | Sätze | Schlüssel, Bezeichnung, Förderstelle, Bundesland, Wert, gültig ab, Quelle (SV, DB, DZ je Bundesland, KommSt, MV, U-Bahn-Abgabe nur Wien, Diäten, FISA+- und ÖFI-Grenzen) |
@@ -82,11 +84,11 @@ python3 -I google/build_sheets.py vorlage/20270826_EMPTY_TEMPLATE.xlsx google/po
 ```
 
 ```bash
-GSHEET_ID=<ID der Tabelle> node google/fill.js google/sheets.json create paste:Projekt paste:Sätze paste:KV paste:Positionen paste:Zusammenfassung paste:Finanzierung "paste:Übertrag Antrag"
+GSHEET_ID=<ID der Tabelle> node google/fill.js google/sheets.json create paste:Projekt paste:Sätze paste:KV paste:Positionen paste:Reisen paste:Motive paste:Zusammenfassung paste:Finanzierung "paste:Übertrag Antrag"
 ```
 
 ```bash
-GSHEET_ID=<ID der Tabelle> node google/fill.js google/sheets.json ops:Projekt ops:Positionen ops:Zusammenfassung ops:Finanzierung "ops:Übertrag Antrag" ops:Sätze ops:KV
+GSHEET_ID=<ID der Tabelle> node google/fill.js google/sheets.json ops:Projekt ops:Positionen ops:Reisen ops:Motive ops:Zusammenfassung ops:Finanzierung "ops:Übertrag Antrag" ops:Sätze ops:KV
 ```
 
 Weitere Schritte von `fill.js`:
