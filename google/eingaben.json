@@ -1,15 +1,232 @@
 {
  "Projekt": {
+  "Projekttitel": "",
+  "Produktionsfirma": "",
+  "Förderstelle (Regelwerk)": "FISA+",
+  "Format": "Film",
+  "Anzahl Folgen": "6",
+  "Filmart": "Spielfilm",
+  "Werkstattprojekt (§ 19 KV)": "nein",
+  "gefördert durch BMWKMS/if": "FALSCH",
   "Debutfilm (Regie)": "WAHR",
   "Debut (Drehbuch)": "WAHR",
-  "Bundesland der Betriebsstätte": "Tirol"
+  "Green Bonus beantragt": "WAHR",
+  "Gender Gap Financing beantragt": "FALSCH",
+  "Bundesland der Betriebsstätte": "Tirol",
+  "Stichtag für Sätze": "01.01.2027",
+  "Überschreitungsreserve": "5%",
+  "Honorar Produzent*in (Anteil der FK)": "0%",
+  "Completion Bond": "",
+  "Finanzierungskosten": "",
+  "Kostenstand per": ""
  },
  "Positionen": {
+  "4|0": {
+   "Preis": "46380"
+  },
+  "7|0": {
+   "Preis": "10000"
+  },
+  "9|0": {
+   "Preis": "12000"
+  },
+  "10|0": {
+   "Preis": "2160"
+  },
+  "12|0": {
+   "Preis": "2160"
+  },
   "13|0": {
-   "Einheit": "Wochen 60 h",
    "Menge": "8",
+   "Einheit": "Wochen 60 h",
    "ILV": "WAHR",
    "M/W": "M"
+  },
+  "14|0": {
+   "Menge": "8",
+   "Einheit": "Wochen 60 h"
+  },
+  "15|0": {
+   "Menge": "8",
+   "Einheit": "Wochen 60 h"
+  },
+  "18|0": {
+   "Menge": "8",
+   "Einheit": "Wochen 60 h"
+  },
+  "21|0": {
+   "Menge": "8",
+   "Einheit": "Wochen 60 h",
+   "ILV": "WAHR"
+  },
+  "25|0": {
+   "Menge": "8",
+   "Einheit": "Wochen 60 h"
+  },
+  "28|0": {
+   "Menge": "8",
+   "Einheit": "Wochen 60 h"
+  },
+  "29|0": {
+   "Menge": "6",
+   "Einheit": "Wochen 60 h"
+  },
+  "30|0": {
+   "Menge": "5",
+   "Einheit": "Wochen 60 h"
+  },
+  "31|0": {
+   "Menge": "2",
+   "Einheit": "Wochen 60 h"
+  },
+  "35|0": {
+   "Menge": "6",
+   "Einheit": "Wochen 60 h"
+  },
+  "36|0": {
+   "Einheit": "Wochen 60 h"
+  },
+  "37|0": {
+   "Menge": "5",
+   "Einheit": "Wochen 60 h"
+  },
+  "38|0": {
+   "Menge": "6",
+   "Einheit": "Wochen 60 h"
+  },
+  "39|0": {
+   "Menge": "5",
+   "Einheit": "Wochen 60 h"
+  },
+  "50|0": {
+   "Menge": "6",
+   "Einheit": "Wochen 60 h"
+  },
+  "51|0": {
+   "Menge": "6",
+   "Einheit": "Wochen 60 h"
+  },
+  "57|0": {
+   "Menge": "8",
+   "Einheit": "Wochen 60 h"
+  },
+  "58|0": {
+   "Menge": "8",
+   "Einheit": "Wochen 60 h"
+  },
+  "59|0": {
+   "Menge": "7",
+   "Einheit": "Wochen 60 h"
+  },
+  "62|0": {
+   "Menge": "5",
+   "Einheit": "Wochen 60 h"
+  },
+  "68|0": {
+   "Menge": "7",
+   "Einheit": "Wochen 60 h"
+  },
+  "82|0": {
+   "Position": "Hansi",
+   "Name / Beschreibung": "?"
+  },
+  "82|1": {
+   "Position": "Lenz",
+   "Name / Beschreibung": "?",
+   "Menge": "10",
+   "Preis": "1500"
+  },
+  "82|2": {
+   "Position": "Manona",
+   "Name / Beschreibung": "?",
+   "Menge": "10",
+   "Preis": "1200"
+  },
+  "82|3": {
+   "Position": "Cedric",
+   "Name / Beschreibung": "?",
+   "Menge": "10",
+   "Preis": "1500"
+  },
+  "82|4": {
+   "Position": "Mani",
+   "Name / Beschreibung": "?",
+   "Menge": "10"
+  },
+  "82|5": {
+   "Position": "Victoria",
+   "Name / Beschreibung": "?",
+   "Menge": "4",
+   "Preis": "1200"
+  },
+  "82|6": {
+   "Position": "Rene",
+   "Name / Beschreibung": "?",
+   "Menge": "5",
+   "Preis": "1300"
+  },
+  "88|0": {
+   "Preis": "15000"
+  },
+  "93|0": {
+   "Preis": "4000"
+  },
+  "94.0|0": {
+   "Preis": "3000"
+  },
+  "95|0": {
+   "Menge": "5",
+   "Preis": "3500"
+  },
+  "97|0": {
+   "Menge": "5",
+   "Preis": "500"
+  },
+  "98|0": {
+   "Menge": "5",
+   "Preis": "3500"
+  },
+  "109|0": {
+   "Menge": "1",
+   "Preis": "1500"
+  },
+  "110|0": {
+   "Menge": "1",
+   "Preis": "10000"
+  },
+  "112|0": {
+   "Menge": "1",
+   "Preis": "1500"
+  },
+  "114|0": {
+   "Menge": "1",
+   "Preis": "10000"
+  },
+  "116|0": {
+   "Menge": "1",
+   "Preis": "20000"
+  },
+  "119|0": {
+   "Menge": "1",
+   "Preis": "10000"
+  },
+  "121|0": {
+   "Menge": "1",
+   "Preis": "6000"
+  }
+ },
+ "Finanzierung": {
+  "Finanzierung Partner A": {
+   "Quelle": "JOYN",
+   "Betrag": "285000"
+  },
+  "Finanzierung Partner B": {
+   "Quelle": "Seefeld",
+   "Betrag": "285000"
+  },
+  "Finanzierung Partner C": {
+   "Quelle": "Cine Tirol",
+   "Betrag": "100000"
   }
  }
 }
